@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import           Control.Monad.State
 import qualified Data.Text as T
 import           Yi hiding (super)
 import qualified Yi.Keymap.Vim as V
@@ -7,13 +8,17 @@ import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
 import qualified Yi.Mode.Haskell as Haskell
 import qualified Yi.Rope as R
+
 import           Fuzzy
 
 main :: IO ()
 main = yi $ defaultVimConfig {
     modeTable = fmap prefIndent (modeTable defaultVimConfig),
     defaultKm = myKeymapSet,
-    configCheckExternalChangesObsessively = False
+    configCheckExternalChangesObsessively = False,
+    startActions = [EditorA (do
+        e <- get
+        put e { maxStatusHeight = 30 })]
 }
 
 myKeymapSet :: KeymapSet

@@ -48,7 +48,6 @@ import           Control.Monad.Base
 import           Control.Monad.State (gets)
 import           Data.Binary
 import           Data.Default
-import           Data.Foldable (foldMap)
 import           Data.List (isSuffixOf)
 import qualified Data.Map.Strict as M
 import           Data.Monoid
@@ -69,8 +68,7 @@ import           Yi.Utils ()
 
 -- FuzzyState is stored in minibuffer's dynamic state
 data FuzzyState = FuzzyState
-    { _fsDisplayBuffer :: !BufferRef
-    , _fsItems :: !(V.Vector FuzzyItem)
+    { _fsItems :: !(V.Vector FuzzyItem)
     , fsSelectedIndex :: !(Maybe Int)
     , fsNeedle :: !T.Text
     } deriving (Show, Generic, Typeable)
@@ -88,16 +86,13 @@ itemToString (BufferItem (FileBuffer x))  = x
 
 fuzzyOpen :: YiM ()
 fuzzyOpen = do
-    withEditor splitE
-    displayBufRef <- withEditor newTempBufferE
     fileList <- fmap (fmap FileItem)
                      (liftBase (getRecursiveContents "."))
     bufList <- fmap (fmap (BufferItem . ident . attributes))
                     (withEditor (gets (M.elems . buffers)))
     promptRef <- withEditor (spawnMinibufferE "" (const localKeymap))
     let initialState =
-            FuzzyState displayBufRef
-                       (V.fromList (fileList <> bufList))
+            FuzzyState (V.fromList (fileList <> bufList))
                        (Just 0)
                        ""
     withGivenBuffer promptRef $ do
@@ -130,8 +125,8 @@ localKeymap =
         [ spec KEnter ?>>! openInThisWindow
         , ctrlCh 't'  ?>>! openInNewTab
         , ctrlCh 's'  ?>>! openInSplit
-        , spec KEsc   ?>>! replicateM 2 closeBufferAndWindowE
-        , ctrlCh 'g'  ?>>! replicateM 2 closeBufferAndWindowE
+        , spec KEsc   ?>>! cleanupE
+        , ctrlCh 'g'  ?>>! cleanupE
         , ctrlCh 'h'  ?>>! updatingB (deleteB Character Backward)
         , spec KBS    ?>>! updatingB (deleteB Character Backward)
         , spec KDel   ?>>! updatingB (deleteB Character Backward)
@@ -166,7 +161,7 @@ updateNeedleB = do
    return newState
 
 filteredItems :: FuzzyState -> (V.Vector (FuzzyItem, Int))
-filteredItems (FuzzyState _ items _ needle) =
+filteredItems (FuzzyState items _ needle) =
     V.filter (subsequenceMatch (T.unpack needle) . itemToString . fst)
              (V.zip items (V.enumFromTo 0 (V.length items)))
 
@@ -178,8 +173,8 @@ modifyE f = do
     renderE newState
 
 incrementIndex :: FuzzyState -> FuzzyState
-incrementIndex fs@(FuzzyState _ _ Nothing _) = fs
-incrementIndex fs@(FuzzyState _ items (Just index) _) =
+incrementIndex fs@(FuzzyState _ Nothing _) = fs
+incrementIndex fs@(FuzzyState _ (Just index) _) =
     let fitems = filteredItems fs
         steps = V.zipWith (\x y -> (snd x, snd y)) fitems (V.tail fitems)
         newIndex =  case V.find ((== index) . fst) steps of
@@ -188,8 +183,8 @@ incrementIndex fs@(FuzzyState _ items (Just index) _) =
     in fs { fsSelectedIndex = newIndex }
 
 decrementIndex :: FuzzyState -> FuzzyState
-decrementIndex fs@(FuzzyState _ _ Nothing _) = fs
-decrementIndex fs@(FuzzyState _ _ (Just index) _) =
+decrementIndex fs@(FuzzyState _ Nothing _) = fs
+decrementIndex fs@(FuzzyState _ (Just index) _) =
     let fitems = filteredItems fs
         steps = V.zipWith (\x y -> (snd x, snd y)) (V.tail fitems) fitems
         newIndex = case V.find ((== index) . fst) steps of
@@ -198,17 +193,17 @@ decrementIndex fs@(FuzzyState _ _ (Just index) _) =
     in fs { fsSelectedIndex = newIndex }
 
 renderE :: FuzzyState -> EditorM ()
-renderE fs@(FuzzyState dref _ selIndex _) = do
-    let content = R.fromText (foldMap renderItem (filteredItems fs))
-        renderItem (item, itemIndex) = mconcat
+renderE fs@(FuzzyState _ selIndex _) = do
+    let content = V.toList (fmap renderItem (filteredItems fs))
+        -- TODO justify to actual screen width
+        renderItem (item, itemIndex) = (T.justifyLeft 79 ' ' . mconcat)
             [ (if Just itemIndex == selIndex then "* " else "  ")
             , renderItem' item
-            , "\n"
             ]
         renderItem' (FileItem x) = "File  " <> T.pack x
         renderItem' (BufferItem (MemBuffer x)) = "Buffer  " <> x
         renderItem' (BufferItem (FileBuffer x)) = "Buffer  " <> T.pack x
-    withGivenBuffer dref (replaceBufferContent content)
+    setStatus (content, defaultStyle)
 
 openInThisWindow :: YiM ()
 openInThisWindow = openRoutine (return ())
@@ -221,7 +216,7 @@ openInNewTab = openRoutine newTabE
 
 openRoutine :: EditorM () -> YiM ()
 openRoutine preOpenAction = do
-    FuzzyState _ items mselIndex _ <- withCurrentBuffer getBufferDyn
+    FuzzyState items mselIndex _ <- withCurrentBuffer getBufferDyn
     case mselIndex of
         Nothing -> printMsg "Nothing selected"
         Just selIndex -> do
@@ -233,12 +228,15 @@ openRoutine preOpenAction = do
                             [] -> error ("Couldn't find buffer" <> show x)
                             (bufRef, _) : _ -> switchToBufferE bufRef
             withEditor $ do
-                replicateM_ 2 closeBufferAndWindowE
+                cleanupE
                 preOpenAction
             action
 
 insertChar :: Keymap
 insertChar = textChar >>= write . insertB
+
+cleanupE :: EditorM ()
+cleanupE = clrStatus >> closeBufferAndWindowE
 
 instance Binary FuzzyItem where
     put (FileItem x) = put (0 :: Int) >> put x
@@ -251,17 +249,15 @@ instance Binary FuzzyItem where
             _ -> error "Unexpected FuzzyItem Binary."
 
 instance Binary FuzzyState where
-    put (FuzzyState dref items index needle) = do
-        put dref
+    put (FuzzyState items index needle) = do
         put (V.length items)
         V.mapM_ put items
         put index
         put (T.encodeUtf8 needle)
     get = do
-        dref <- get
         itemCount <- get
         items <- liftM V.fromList (replicateM itemCount get)
-        liftM2 (FuzzyState dref items) get (liftM T.decodeUtf8 get)
+        liftM2 (FuzzyState items) get (liftM T.decodeUtf8 get)
 
 instance Default FuzzyState where
     def = error "I can't think of any sane implementation."
