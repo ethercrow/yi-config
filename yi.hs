@@ -9,17 +9,18 @@ import qualified Yi.Keymap.Vim.Utils as V
 import qualified Yi.Mode.Haskell as Haskell
 import qualified Yi.Rope as R
 
-import           Fuzzy
+import Fuzzy
+import Make
 
 main :: IO ()
-main = yi $ defaultVimConfig {
-    modeTable = fmap prefIndent (modeTable defaultVimConfig),
-    defaultKm = myKeymapSet,
-    configCheckExternalChangesObsessively = False,
-    startActions = [EditorA (do
+main = yi $ defaultVimConfig
+    { modeTable = fmap prefIndent (modeTable defaultVimConfig)
+    , defaultKm = myKeymapSet
+    , configCheckExternalChangesObsessively = False
+    , startActions = [EditorA (do
         e <- get
         put e { maxStatusHeight = 30 })]
-}
+    }
 
 myKeymapSet :: KeymapSet
 myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
@@ -27,6 +28,7 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
     in super
         { V.vimBindings = myBindings eval ++ V.vimBindings super
         , V.vimRelayout = colemakRelayout
+        , V.vimExCommandParsers = exMake : V.vimExCommandParsers super
         }
 
 myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]
