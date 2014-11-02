@@ -110,6 +110,7 @@ getRecursiveContents topdir = do
         predicate fileName = and
             [ fileName `notElem` [".", "..", ".git", ".svn"]
             , not (".hi" `isSuffixOf` fileName)
+            , not ("-boot" `isSuffixOf` fileName)
             ]
     paths <- forM properNames $ \name -> do
         let path = topdir </> name
