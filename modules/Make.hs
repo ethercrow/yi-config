@@ -74,7 +74,7 @@ parseCompilerMessage :: String -> Maybe CompilerMessage
 parseCompilerMessage s =
     either (const Nothing) Just (P.parse (P.choice errorParsers) "" s)
     where
-        errorParsers = [P.try multilineSpan, P.try onelineSpan, point, line]
+        errorParsers = [P.try multilineSpan, P.try onelineSpan, P.try point, line]
 
 point :: P.GenParser Char () CompilerMessage
 point = do
@@ -93,8 +93,8 @@ line = do
     _ <- P.char ':'
     l <- number
     _ <- P.char ':'
-    _ <- P.anyChar
-    return (CompilerMessage filename l 0 l 1)
+    _ <- P.many P.anyChar
+    return (CompilerMessage filename l 1 l (-1))
 
 onelineSpan :: P.GenParser Char () CompilerMessage
 onelineSpan = do
@@ -143,7 +143,9 @@ messageToOverlayB :: CompilerMessage -> BufferM Overlay
 messageToOverlayB (CompilerMessage _ l1 c1 l2 c2) = savingPointB $ do
     moveToLineColB l1 (c1 - 1)
     p1 <- pointB
-    moveToLineColB l2 c2
+    if c2 >= 0
+    then moveToLineColB l2 c2
+    else moveToLineColB l2 0 >> moveToEol
     p2 <- pointB
     return (mkOverlay "make" (mkRegion p1 p2) errorStyle)
 
