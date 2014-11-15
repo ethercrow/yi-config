@@ -28,7 +28,7 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
     in super
         { V.vimBindings = myBindings eval ++ V.vimBindings super
         , V.vimRelayout = colemakRelayout
-        , V.vimExCommandParsers = exMake : V.vimExCommandParsers super
+        , V.vimExCommandParsers = exMake : exMakePrg : V.vimExCommandParsers super
         }
 
 myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]

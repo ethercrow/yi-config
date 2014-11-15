@@ -1,12 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Make where
 
 import Control.Concurrent
-import Control.Lens
+import Control.Lens hiding (Action)
 import Control.Monad
-import Control.Monad.State
+import Control.Monad.State (gets)
 import Control.Monad.Reader
+import Data.Binary
+import Data.Default
 import Data.Function (on)
 import Data.List (sortBy, groupBy)
 import Data.Maybe (mapMaybe)
@@ -14,29 +18,59 @@ import Data.Monoid
 import qualified Data.Map.Strict as M
 import Data.Ord (comparing)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import Data.Typeable
 import System.Exit
 import System.Process
 import qualified Text.ParserCombinators.Parsec as P
 
 import Yi
-import qualified Yi.Rope as R
+import Yi.Types
 import Yi.Utils
 import System.CanonicalizePath
 import qualified Yi.Keymap.Vim.Common as V
+import qualified Yi.Keymap.Vim.StateUtils as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 
 exMake :: V.EventString -> Maybe V.ExCommand
-exMake "make" = Just (V.impureExCommand{V.cmdAction = YiA cmdAction})
+exMake "make" = Just (V.impureExCommand{V.cmdAction = YiA make})
+exMake "wm" = Just (V.impureExCommand{V.cmdAction = YiA (viWrite >> make)})
 exMake _ = Nothing
 
-cmdAction :: YiM ()
-cmdAction = do
-    let makeprg = "make"
+exMakePrg :: V.EventString -> Maybe V.ExCommand
+exMakePrg = V.parseTextOption "makeprg" $ \case
+    V.TextAsk -> EditorA $ do
+        makePrg <- getEditorDyn
+        printMsg $ "makePrg = " <> unMakePrg makePrg
+    (V.TextSet makePrg) -> EditorA (putEditorDyn (MakePrg makePrg))
+
+modPaste :: (Bool -> Bool) -> Action
+modPaste f = EditorA . V.modifyStateE $ \s -> s { V.vsPaste = f (V.vsPaste s) }
+
+newtype MakePrg = MakePrg { unMakePrg :: T.Text }
+    deriving (Show, Typeable)
+
+instance Binary MakePrg where
+    get = fmap (MakePrg . TE.decodeUtf8) get
+    put (MakePrg text)  = put (TE.encodeUtf8 text)
+
+instance Default MakePrg where
+    def = MakePrg "make"
+
+instance YiVariable MakePrg
+
+make :: YiM ()
+make = do
+    makeprg <- withEditor getEditorDyn
+    let cmd : args =
+            case T.words (unMakePrg makeprg) of
+                [] -> error "empty makeprg"
+                ws -> fmap T.unpack ws
     printMsg "Launching make process"
     x <- ask
     void . io . forkIO $ do
-        (code, out, err) <- readProcessWithExitCode makeprg [] ""
+        (code, out, err) <- readProcessWithExitCode cmd args ""
         let messagesWithPossiblyRelativePaths =
                 mapMaybe parseCompilerMessage (lines (out <> "\n" <> err))
         messages <-
