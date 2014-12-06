@@ -20,6 +20,7 @@ import Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Typeable
+import System.Directory
 import System.Exit
 import System.Process
 import qualified Text.ParserCombinators.Parsec as P
@@ -27,7 +28,6 @@ import qualified Text.ParserCombinators.Parsec as P
 import Yi
 import Yi.Types
 import Yi.Utils
-import System.CanonicalizePath
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.StateUtils as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
@@ -40,10 +40,10 @@ exMake _ = Nothing
 
 exMakePrg :: V.EventString -> Maybe V.ExCommand
 exMakePrg = V.parseTextOption "makeprg" $ \case
-    V.TextAsk -> EditorA $ do
+    V.TextOptionAsk -> EditorA $ do
         makePrg <- getEditorDyn
-        printMsg $ "makePrg = " <> unMakePrg makePrg
-    (V.TextSet makePrg) -> EditorA (putEditorDyn (MakePrg makePrg))
+        printMsg $ "makeprg = " <> unMakePrg makePrg
+    (V.TextOptionSet makePrg) -> EditorA (putEditorDyn (MakePrg makePrg))
 
 modPaste :: (Bool -> Bool) -> Action
 modPaste f = EditorA . V.modifyStateE $ \s -> s { V.vsPaste = f (V.vsPaste s) }
@@ -185,6 +185,6 @@ messageToOverlayB (CompilerMessage _ l1 c1 l2 c2) = savingPointB $ do
 
 absolutizePathInMessage :: CompilerMessage -> IO CompilerMessage
 absolutizePathInMessage msg@CompilerMessage{cmFilePath = path} = do
-    absPath <- normalisePath path
+    absPath <- canonicalizePath path
     return msg{cmFilePath = absPath}
 
