@@ -45,6 +45,8 @@ myBindings eval =
        , nmap " " (eval ":nohlsearch<CR>")
        , nmap ";" (eval ":")
        , nmapY "<C-;>" fuzzyOpen
+       , nmap "<M-l>" (withCurrentBuffer (transposeB unitWord Forward >> leftB))
+       , nmap "<M-h>" (withCurrentBuffer (transposeB unitWord Backward))
        ]
 
 colemakRelayout :: Char -> Char
