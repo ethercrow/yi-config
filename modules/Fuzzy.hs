@@ -48,7 +48,7 @@ import           Control.Monad.Base
 import           Control.Monad.State (gets)
 import           Data.Binary
 import           Data.Default
-import           Data.List (isSuffixOf)
+import           Data.List (isInfixOf, isSuffixOf)
 import qualified Data.Map.Strict as M
 import           Data.Monoid
 import qualified Data.Text as T
@@ -111,6 +111,14 @@ getRecursiveContents topdir = do
             [ fileName `notElem` [".", "..", ".git", ".svn"]
             , not (".hi" `isSuffixOf` fileName)
             , not ("-boot" `isSuffixOf` fileName)
+            , not (".dyn_hi" `isSuffixOf` fileName)
+            , not (".dyn_o" `isSuffixOf` fileName)
+            , not (".p_hi" `isSuffixOf` fileName)
+            , not (".p_o" `isSuffixOf` fileName)
+            , not (".o" `isSuffixOf` fileName)
+            , not (".swp" `isSuffixOf` fileName)
+            , not ("~" `isSuffixOf` fileName)
+            , not ("dist/build/" `isInfixOf` fileName)
             ]
     paths <- forM properNames $ \name -> do
         let path = topdir </> name
