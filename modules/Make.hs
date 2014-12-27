@@ -89,7 +89,7 @@ make = do
                 putEditorDyn ws
                 bufs <- fmap M.toList (gets buffers)
                 forM_ bufs $ \(ref, buf) ->
-                    withGivenBuffer ref $ do
+                    withGivenBuffer ref . retroactivelyAtSavePointB $ do
                         delOverlaysOfOwnerB "make"
                         case M.lookup (buf ^. identA) warningsByBuffer of
                             Just warnings ->
