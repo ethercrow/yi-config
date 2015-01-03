@@ -13,7 +13,7 @@ import Control.Monad.State (gets)
 import Control.Monad.Reader
 import Data.Binary
 import Data.Default
-import Data.Foldable (Foldable, toList)
+import Data.Foldable (Foldable, toList, find)
 import Data.Maybe (mapMaybe)
 import Data.Monoid
 import qualified Data.Map.Strict as M
@@ -29,6 +29,7 @@ import System.Exit
 import System.Process
 
 import Yi
+import qualified Yi.Rope as R
 import Yi.Types
 import Yi.Utils
 import qualified Yi.Keymap.Vim.Common as V
@@ -36,6 +37,16 @@ import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 
 import Warning
+
+showErrorE :: EditorM ()
+showErrorE = do
+    maybeOverlayAtPoint <- withCurrentBuffer $ do
+        p <- pointB
+        overlays <- getOverlaysOfOwnerB "make"
+        return (find (isPointInsideOverlay p) overlays)
+    case maybeOverlayAtPoint of
+        Just overlay -> printMsg (R.toText (overlayAnnotation overlay))
+        Nothing -> return ()
 
 exMake :: V.EventString -> Maybe V.ExCommand
 exMake "make" = Just (V.impureExCommand{V.cmdAction = YiA make})
@@ -120,7 +131,7 @@ messageToOverlayB (Warning _ l1 c1 l2 c2) = savingPointB $ do
     then moveToLineColB l2 c2
     else moveToLineColB l2 0 >> moveToEol
     p2 <- pointB
-    return (mkOverlay "make" (mkRegion p1 p2) errorStyle)
+    return (mkOverlay "make" (mkRegion p1 p2) errorStyle "ohai")
 
 fixPathsInBufferIds :: Warnings -> IO Warnings
 fixPathsInBufferIds (Warnings ws) =
