@@ -38,6 +38,10 @@ import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 
 import Warning
 
+jumpToNextErrorE :: EditorM ()
+jumpToNextErrorE = do
+    printMsg "Not implemented"
+
 showErrorE :: EditorM ()
 showErrorE = do
     maybeOverlayAtPoint <- withCurrentBuffer $ do
@@ -45,7 +49,11 @@ showErrorE = do
         overlays <- getOverlaysOfOwnerB "make"
         return (find (isPointInsideOverlay p) overlays)
     case maybeOverlayAtPoint of
-        Just overlay -> printMsg (R.toText (overlayAnnotation overlay))
+        Just overlay ->
+            printMsgs
+                (fmap
+                    R.toText
+                    (R.lines (overlayAnnotation overlay)))
         Nothing -> return ()
 
 exMake :: V.EventString -> Maybe V.ExCommand
@@ -131,7 +139,7 @@ messageToOverlayB (Warning _ l1 c1 l2 c2) = savingPointB $ do
     then moveToLineColB l2 c2
     else moveToLineColB l2 0 >> moveToEol
     p2 <- pointB
-    return (mkOverlay "make" (mkRegion p1 p2) errorStyle "ohai")
+    return (mkOverlay "make" (mkRegion p1 p2) errorStyle "Warning!\nBlah-blah-blah")
 
 fixPathsInBufferIds :: Warnings -> IO Warnings
 fixPathsInBufferIds (Warnings ws) =
