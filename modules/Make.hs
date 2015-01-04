@@ -3,6 +3,16 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- TODO:
+-- 
+--  * parse (possibly multiline) error messages
+--  * Fix showing of multiline error messages (currently short lines
+--    are grouped in one line)
+--  * action for jumping to the next error in current buffer
+--  * fuzzy-open dialog for error list
+--  * Somehow mark tabs with errors. Maybe with color or with a '!'.
+--  * Show error number in modeline
+
 module Make where
 
 import Control.Applicative
