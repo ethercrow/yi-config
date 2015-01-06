@@ -5,6 +5,7 @@ module Warning
     , parseWarning
     ) where
 
+import Control.Applicative
 import Data.Binary
 import GHC.Generics
 
@@ -26,27 +27,27 @@ parseWarning s =
 
 point :: P.GenParser Char () Warning
 point = do
-    filename <- P.many1 (P.noneOf ":")
+    fn <- filename
     _ <- P.char ':'
     l <- number
     _ <- P.char ':'
     c <- number
     _ <- P.char ':'
     _ <- P.anyChar
-    return (Warning filename l c l (c + 1))
+    return (Warning fn l c l (c + 1))
 
 line :: P.GenParser Char () Warning
 line = do
-    filename <- P.many1 (P.noneOf ":")
+    fn <- filename
     _ <- P.char ':'
     l <- number
     _ <- P.char ':'
     _ <- P.many P.anyChar
-    return (Warning filename l 1 l (-1))
+    return (Warning fn l 1 l (-1))
 
 onelineSpan :: P.GenParser Char () Warning
 onelineSpan = do
-    filename <- P.many1 (P.noneOf ":")
+    fn <- filename
     _ <- P.char ':'
     l <- number
     _ <- P.char ':'
@@ -55,17 +56,20 @@ onelineSpan = do
     c2 <- number
     _ <- P.char ':'
     _ <- P.many P.anyChar
-    return (Warning filename l c1 l c2)
+    return (Warning fn l c1 l c2)
 
 multilineSpan :: P.GenParser Char () Warning
 multilineSpan = do
-    filename <- P.many1 (P.noneOf ":")
+    fn <- filename
     _ <- P.char ':'
     (l1, c1) <- lineCol
     _ <- P.char '-'
     (l2, c2) <- lineCol
     _ <- P.many P.anyChar
-    return (Warning filename l1 c1 l2 c2)
+    return (Warning fn l1 c1 l2 c2)
+
+filename :: P.GenParser Char () FilePath
+filename = (:) <$> P.noneOf " :" <*> P.many1 (P.noneOf ":")
 
 number :: P.GenParser Char () Int
 number = fmap read (P.many1 P.digit)
