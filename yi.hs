@@ -1,20 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -imodules #-}
 
+import           Control.Lens
 import           Control.Monad.State
 import qualified Data.Text as T
 import           Yi hiding (super)
+import           Yi.Modes
 import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
+import           Yi.Lexer.Alex
 import qualified Yi.Mode.Haskell as Haskell
 import qualified Yi.Rope as R
+import           Yi.Syntax
 
 import Fuzzy
 import Make
+import RainbowMode
 
 main :: IO ()
 main = yi $ defaultVimConfig
-    { modeTable = fmap prefIndent (modeTable defaultVimConfig)
+    { modeTable = fmap prefIndent (myModes defaultVimConfig)
     , defaultKm = myKeymapSet
     , configCheckExternalChangesObsessively = False
     , startActions = [EditorA (do
@@ -57,9 +63,14 @@ colemakRelayout = V.relayoutFromTo colemakLayout qwertyLayout
         qwertyLayout = concat ["qwertyuiop[]", "asdfghjkl;'\\", "zxcvbnm,./"]
 
 prefIndent :: AnyMode -> AnyMode
-prefIndent = onMode $ \m -> m {
-    modeIndentSettings = IndentSettings
-        { expandTabs = True
-        , shiftWidth = 4
-        , tabSize = 4
-        }}
+prefIndent = onMode $ \m ->
+    if m ^. modeNameA == "Makefile"
+    then m
+    else m
+        { modeIndentSettings = IndentSettings
+            { expandTabs = True
+            , shiftWidth = 4
+            , tabSize = 4
+            }}
+
+myModes cfg = AnyMode rainbowParenMode : modeTable cfg
