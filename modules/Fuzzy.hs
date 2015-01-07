@@ -205,7 +205,7 @@ renderE :: FuzzyState -> EditorM ()
 renderE fs@(FuzzyState _ selIndex _) = do
     let content = V.toList (fmap renderItem (filteredItems fs))
         -- TODO justify to actual screen width
-        renderItem (item, itemIndex) = (T.justifyLeft 79 ' ' . mconcat)
+        renderItem (item, itemIndex) = mconcat
             [ (if Just itemIndex == selIndex then "* " else "  ")
             , renderItem' item
             ]
