@@ -1,18 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -imodules #-}
 
-import           Control.Lens
-import           Control.Monad.State
-import qualified Data.Text as T
+import           Control.Lens hiding (imap)
+import           Control.Monad.State hiding (state)
 import           Yi hiding (super)
-import           Yi.Modes
 import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
-import           Yi.Lexer.Alex
-import qualified Yi.Mode.Haskell as Haskell
-import qualified Yi.Rope as R
-import           Yi.Syntax
 
 import Fuzzy
 import Make
@@ -41,7 +35,7 @@ myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]
 myBindings eval =
     let nmap x y = V.mkStringBindingE V.Normal V.Drop (x, y, id)
         nmapY x y = V.mkStringBindingY V.Normal (x, y, id)
-        imap x y = V.VimBindingE (\evs state -> case V.vsMode state of
+        _imap x y = V.VimBindingE (\evs state -> case V.vsMode state of
                                     V.Insert _ ->
                                         fmap (const (y >> return V.Continue))
                                              (evs `V.matchesString` x)
@@ -73,4 +67,5 @@ prefIndent = onMode $ \m ->
             , tabSize = 4
             }}
 
+myModes :: Config -> [AnyMode]
 myModes cfg = AnyMode rainbowParenMode : modeTable cfg
