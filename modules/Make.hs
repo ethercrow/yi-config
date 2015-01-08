@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- TODO:
 -- 
@@ -24,7 +25,6 @@ import Control.Monad.Reader
 import Data.Binary
 import Data.Default
 import Data.Foldable (Foldable, toList, find)
-import Data.Maybe (mapMaybe)
 import Data.Monoid
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -39,12 +39,13 @@ import System.Exit
 import System.Process
 
 import Yi
-import qualified Yi.Rope as R
-import Yi.Types
-import Yi.Utils
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
+import qualified Yi.Rope as R
+import Yi.Types
+import Yi.Utils
+import Yi.Window (width)
 
 import Warning
 
@@ -52,17 +53,23 @@ jumpToNextErrorE :: EditorM ()
 jumpToNextErrorE = do
     printMsg "Not implemented"
 
+debug :: EditorM ()
+debug = do
+    ws :: WarningStorage <- getEditorDyn
+    withCurrentBuffer $ insertN (R.fromString (show ws))
+
 showErrorE :: EditorM ()
 showErrorE = do
     maybeOverlayAtPoint <- withCurrentBuffer $ do
         p <- pointB
         overlays <- getOverlaysOfOwnerB "make"
         return (find (isPointInsideOverlay p) overlays)
+    winWidth <- fmap width (use currentWindowA)
     case maybeOverlayAtPoint of
         Just overlay ->
             printMsgs
                 (fmap
-                    R.toText
+                    (T.justifyLeft (winWidth - 1) . R.toText)
                     (R.lines (overlayAnnotation overlay)))
         Nothing -> return ()
 
@@ -90,15 +97,15 @@ instance Default MakePrg where
 
 instance YiVariable MakePrg
 
-newtype Warnings = Warnings (M.Map BufferId (V.Vector Warning))
+newtype WarningStorage = WarningStorage (M.Map BufferId (V.Vector Warning))
     deriving (Generic, Typeable, Show)
 
-instance Default Warnings where
-    def = Warnings def
+instance Default WarningStorage where
+    def = WarningStorage def
 
-instance Binary Warnings
+instance Binary WarningStorage
 
-instance YiVariable Warnings
+instance YiVariable WarningStorage
 
 make :: YiM ()
 make = do
@@ -111,8 +118,8 @@ make = do
     x <- ask
     void . io . forkIO $ do
         (code, out, err) <- readProcessWithExitCode cmd args ""
-        ws@(Warnings warningsByBuffer) <-
-            fixPathsInBufferIds (parseWarnings (out <> "\n" <> err))
+        ws@(WarningStorage warningsByBuffer) <-
+            fixPathsInBufferIds (parseWarningStorage (out <> "\n" <> err))
         writeFile "warnings" (show ws)
         let action = do
                 putEditorDyn ws
@@ -131,10 +138,10 @@ make = do
                     _ -> printMsg "Make failed"
         yiOutput x MustRefresh [EditorA action]
 
-parseWarnings :: String -> Warnings
-parseWarnings =
-    Warnings . M.mapKeysMonotonic FileBuffer .
-        mapFromValues cmFilePath . mapMaybe parseWarning . lines
+parseWarningStorage :: String -> WarningStorage
+parseWarningStorage =
+    WarningStorage . M.mapKeysMonotonic FileBuffer .
+        mapFromValues cmFilePath . parseWarnings
 
 mapFromValues :: (Foldable f, Applicative t, Monoid (t v), Ord k)
     => (v -> k) -> f v -> M.Map k (t v)
@@ -142,18 +149,18 @@ mapFromValues keyFun values =
     M.fromListWith (<>) (fmap (\v -> (keyFun v, pure v)) (toList values))
 
 messageToOverlayB :: Warning -> BufferM Overlay
-messageToOverlayB (Warning _ l1 c1 l2 c2) = savingPointB $ do
+messageToOverlayB (Warning _ l1 c1 l2 c2 msg) = savingPointB $ do
     moveToLineColB l1 (c1 - 1)
     p1 <- pointB
     if c2 >= 0
     then moveToLineColB l2 c2
     else moveToLineColB l2 0 >> moveToEol
     p2 <- pointB
-    return (mkOverlay "make" (mkRegion p1 p2) errorStyle "Warning!\nBlah-blah-blah")
+    return (mkOverlay "make" (mkRegion p1 p2) errorStyle (R.fromText msg))
 
-fixPathsInBufferIds :: Warnings -> IO Warnings
-fixPathsInBufferIds (Warnings ws) =
-    Warnings <$>
+fixPathsInBufferIds :: WarningStorage -> IO WarningStorage
+fixPathsInBufferIds (WarningStorage ws) =
+    WarningStorage <$>
         traverseKeys
             (\(FileBuffer path) -> FileBuffer <$> canonicalizePath path)
             ws

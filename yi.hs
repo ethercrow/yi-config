@@ -48,6 +48,7 @@ myBindings eval =
        , nmap "<M-l>" (withCurrentBuffer (transposeB unitWord Forward >> leftB))
        , nmap "<M-h>" (withCurrentBuffer (transposeB unitWord Backward))
        , nmap "<C-@>" showErrorE
+       , nmap "<M-d>" debug
        ]
 
 colemakRelayout :: Char -> Char
