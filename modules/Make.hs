@@ -69,7 +69,7 @@ showErrorE = do
         Just overlay ->
             printMsgs
                 (fmap
-                    (T.justifyLeft (winWidth - 1) . R.toText)
+                    (T.justifyLeft (winWidth - 1) ' ' . R.toText)
                     (R.lines (overlayAnnotation overlay)))
         Nothing -> return ()
 
