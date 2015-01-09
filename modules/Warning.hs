@@ -8,6 +8,7 @@ module Warning
 
 import Control.Applicative
 import Data.Binary
+import Data.Char
 import Data.Monoid
 import GHC.Generics
 import qualified Data.Text as T
@@ -19,7 +20,8 @@ type Parser a = P.GenParser Char () a
 
 data Line
     = StarterLine Warning
-    | TextLine T.Text
+    | WarningTextLine T.Text
+    | GarbageLine T.Text
     | EmptyLine
     deriving Show
 
@@ -38,15 +40,16 @@ parseWarnings input =
     where
         go Nothing ws [] = reverse ws
         go (Just w) ws [] = reverse (w : ws)
-        go (Just w) ws (TextLine t : rest) =
+        go (Just w) ws (WarningTextLine t : rest) =
             go (Just (appendMsg t w)) ws rest
         go (Just w) ws rest = go Nothing (w : ws) rest
         go Nothing ws (StarterLine w : rest) = go (Just w) ws rest
         go _ ws (_ : rest) = go Nothing ws rest
         classifiedLines = map parseLine (lines input)
         parseLine "" = EmptyLine
+        parseLine s@(c : _) | isSpace c = WarningTextLine (T.pack s)
         parseLine s = either
-            (const (TextLine (T.pack s)))
+            (const (GarbageLine (T.pack s)))
             StarterLine
             (P.parse (P.choice errorParsers) "" s)
         errorParsers =

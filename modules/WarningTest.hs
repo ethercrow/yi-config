@@ -93,9 +93,9 @@ case_make =
     let input = unlines
             [ "ghc -imodules -ferror-spans -Wall -Werror -c modules/Warning.hs"
             , "modules/Warning.hs:30:5-6:"
-            , "    Not in scope: ‘ei’"
-            , "    Perhaps you meant ‘pi’ (imported from Prelude)"
-            , "     modules/Warning.hs:30:8-11: Not in scope: ‘ther’"
+            , "    Not in scope: 'ei'"
+            , "    Perhaps you meant 'pi' (imported from Prelude)"
+            , "     modules/Warning.hs:30:8-11: Not in scope: 'ther'"
             , "Makefile:6: recipe for target 'modules/Warning.o' failed"
             , "make: *** [modules/Warning.o] Error 1"
             ]
@@ -103,10 +103,10 @@ case_make =
             [ Warning "modules/Warning.hs" 30 5 30 6
                 (T.intercalate "\n"
                     [ ""
-                    , "    Not in scope: ‘ei’"
-                    , "    Perhaps you meant ‘pi’ (imported from Prelude)"
-                    , "     modules/Warning.hs:30:8-11: Not in scope: ‘ther’"
+                    , "    Not in scope: 'ei'"
+                    , "    Perhaps you meant 'pi' (imported from Prelude)"
+                    , "     modules/Warning.hs:30:8-11: Not in scope: 'ther'"
                     ])
-            , Warning "Makefile" 6 1 6 1 "  recipe for target 'modules/Warning.o' failed"
+            , Warning "Makefile" 6 1 6 (-1) " recipe for target 'modules/Warning.o' failed"
             ]
     in do parseWarnings input @?= warnings
