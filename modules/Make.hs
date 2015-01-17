@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -35,7 +34,6 @@ import Data.Tuple (swap)
 import Data.Typeable
 import qualified Data.Vector as V
 import Data.Vector.Binary ()
-import GHC.Generics
 import System.Directory
 import System.Exit
 import System.Process
@@ -100,12 +98,14 @@ instance Default MakePrg where
 instance YiVariable MakePrg
 
 newtype WarningStorage = WarningStorage (M.Map BufferId (V.Vector Warning))
-    deriving (Generic, Typeable, Show)
+    deriving (Typeable, Show)
 
 instance Default WarningStorage where
     def = WarningStorage def
 
-instance Binary WarningStorage
+instance Binary WarningStorage where
+    get = fmap (WarningStorage . fmap V.fromList) get
+    put (WarningStorage ws) = put (fmap V.toList ws)
 
 instance YiVariable WarningStorage
 
