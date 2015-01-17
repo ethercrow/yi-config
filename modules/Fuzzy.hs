@@ -117,8 +117,11 @@ getRecursiveContents topdir = do
             , not (".p_o" `isSuffixOf` fileName)
             , not (".o" `isSuffixOf` fileName)
             , not (".swp" `isSuffixOf` fileName)
+            , not (".beam" `isSuffixOf` fileName)
+            , not (".pyc" `isSuffixOf` fileName)
             , not ("~" `isSuffixOf` fileName)
             , not ("dist/build/" `isInfixOf` fileName)
+            , not (".eunit" `isInfixOf` fileName)
             ]
     paths <- forM properNames $ \name -> do
         let path = topdir </> name
