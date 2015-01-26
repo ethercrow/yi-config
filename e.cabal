@@ -1,0 +1,34 @@
+name:                e
+version:             0.1.0.0
+license:             GPL-3
+license-file:        LICENSE
+author:              Dmitry Ivanov
+maintainer:          ethercrow@gmail.com
+-- copyright:           
+category:            Text
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable e
+  main-is:             Main.hs
+  build-depends:
+      base >=4.7 && <4.8
+    , binary
+    , containers
+    , data-default
+    , directory
+    , filepath
+    , lens
+    , mtl
+    , parsec
+    , process
+    , regex-applicative
+    , text
+    , transformers-base
+    , vector
+    , yi >= 0.11.2
+    , yi-rope
+    , yi-language
+  hs-source-dirs: modules, .
+  ghc-options: -O2 -threaded -Wall -ferror-spans
+  default-language:    Haskell2010
