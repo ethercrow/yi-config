@@ -33,7 +33,6 @@ import qualified Data.Text.Encoding as TE
 import Data.Tuple (swap)
 import Data.Typeable
 import qualified Data.Vector as V
-import Data.Vector.Binary ()
 import System.Directory
 import System.Exit
 import System.Process
