@@ -81,7 +81,7 @@ lexToken = asum
     ]
 
 lexIrrelevant :: RE (Point, Char) ()
-lexIrrelevant = () <$ many (psym ((`notElem` "()") . snd))
+lexIrrelevant = () <$ many (psym ((`notElem` ['(', ')']) . snd))
 
 assignLevels :: [Paren] -> [(Paren, Int)]
 assignLevels = go [] 0

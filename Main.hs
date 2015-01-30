@@ -1,8 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -imodules #-}
 
-import Control.Lens hiding (imap)
+import Control.Lens hiding (argument, imap)
 import Control.Monad.State hiding (state)
+import Data.List (intersperse)
+import System.Console.Docopt
+import System.Environment
 
 import Yi hiding (super)
 import qualified Yi.Keymap.Vim as V
@@ -13,17 +16,40 @@ import Fuzzy
 import Make
 import RainbowMode
 
-main :: IO ()
-main = startEditor myConfig Nothing
 
-myConfig :: Config
-myConfig = defaultVimConfig
+usage :: String
+usage = unlines
+    [ "Usage: "
+    , "  e [-p] [<file> ...]"
+    , "  e (-h|--help)"
+    , ""
+    , "Options:"
+    , "  -p      Open files in tabs instead of buffers"
+    , "  -h,--help      Show usage"
+    ]
+
+main :: IO ()
+main = do
+    args <- optionsWithUsage usage =<< getArgs
+    let files = getAllArgs args (argument "<file>")
+        actions =
+            (if isPresent args (shortOption 'p')
+             then intersperse (EditorA newTabE)
+             else id)
+                (map (YiA . openNewFile) files)
+    print args
+    startEditor (myConfig actions) Nothing
+
+myConfig :: [Action] -> Config
+myConfig actions = defaultVimConfig
     { modeTable = fmap prefIndent (myModes defaultVimConfig)
     , defaultKm = myKeymapSet
     , configCheckExternalChangesObsessively = False
-    , startActions = [EditorA (do
-        e <- get
-        put e { maxStatusHeight = 30 })]
+    , startActions =
+        (EditorA (do
+            e <- get
+            put e { maxStatusHeight = 30 }))
+        : actions
     }
 
 myKeymapSet :: KeymapSet
