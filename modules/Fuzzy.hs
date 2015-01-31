@@ -192,7 +192,7 @@ filteredItems (FuzzyState items _ needle) =
         scores = V.fromList (fmap snd (scoreAll needle (V.toList (V.map itemToText items))))
         sortByScore v = runST $ do
             mv <- V.thaw v
-            Introsort.sortBy (comparing fst3) mv
+            Introsort.sortBy (comparing (negate . fst3)) mv
             V.freeze mv
 
 modifyE :: (FuzzyState -> FuzzyState) -> EditorM ()
