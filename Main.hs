@@ -20,11 +20,10 @@ import RainbowMode
 usage :: String
 usage = unlines
     [ "Usage: "
-    , "  e [-p] [<file> ...]"
+    , "  e [<file> ...]"
     , "  e (-h|--help)"
     , ""
     , "Options:"
-    , "  -p      Open files in tabs instead of buffers"
     , "  -h,--help      Show usage"
     ]
 
@@ -32,12 +31,7 @@ main :: IO ()
 main = do
     args <- optionsWithUsage usage =<< getArgs
     let files = getAllArgs args (argument "<file>")
-        actions =
-            (if isPresent args (shortOption 'p')
-             then intersperse (EditorA newTabE)
-             else id)
-                (map (YiA . openNewFile) files)
-    print args
+        actions = intersperse (EditorA newTabE) (map (YiA . openNewFile) files)
     startEditor (myConfig actions) Nothing
 
 myConfig :: [Action] -> Config
