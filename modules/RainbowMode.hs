@@ -24,8 +24,8 @@ styleForLevel = (colors !!) . (`rem` length colors)
         colors =
             [ importStyle
             , stringStyle
-            , keywordStyle
             , numberStyle
+            , dataConstructorStyle
             ]
 
 tokenPoint :: Paren -> Point
