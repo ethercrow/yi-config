@@ -21,12 +21,14 @@ executable e
     , filepath
     , lens
     , mtl
+    , parallel
     , parsec
     , process
     , regex-applicative
     , text
     , transformers-base
     , vector
+    , vector-algorithms
     , yi >= 0.11.2
     , yi-rope
     , yi-language

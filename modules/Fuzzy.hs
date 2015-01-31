@@ -46,26 +46,30 @@ module Fuzzy (fuzzyOpen) where
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Base
+import           Control.Monad.ST
 import           Control.Monad.State (gets)
 import           Data.Binary
 import           Data.Default
 import           Data.List (isInfixOf, isSuffixOf)
 import qualified Data.Map.Strict as M
 import           Data.Monoid
+import           Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Typeable
 import qualified Data.Vector as V
+import qualified Data.Vector.Algorithms.Intro as Introsort
 import           GHC.Generics
 import           System.Directory (doesDirectoryExist, getDirectoryContents)
 import           System.FilePath ((</>))
 
 import           Yi
-import           Yi.Completion
 import           Yi.MiniBuffer
 import qualified Yi.Rope as R
 import           Yi.Types
 import           Yi.Utils ()
+
+import FuzzyMatchScore
 
 -- FuzzyState is stored in minibuffer's dynamic state
 data FuzzyState = FuzzyState
@@ -79,11 +83,10 @@ data FuzzyItem
     | BufferItem { _bufferIdent :: !BufferId }
     deriving (Show, Typeable)
 
--- TODO: make subsequenceMatch work on Text
-itemToString :: FuzzyItem -> String
-itemToString (FileItem x) = x
-itemToString (BufferItem (MemBuffer x))  = T.unpack x
-itemToString (BufferItem (FileBuffer x))  = x
+itemToText :: FuzzyItem -> T.Text
+itemToText (FileItem x) = T.pack x
+itemToText (BufferItem (MemBuffer x))  = x
+itemToText (BufferItem (FileBuffer x))  = T.pack x
 
 fuzzyOpen :: YiM ()
 fuzzyOpen = do
@@ -175,8 +178,22 @@ updateNeedleB = do
 
 filteredItems :: FuzzyState -> (V.Vector (FuzzyItem, Int))
 filteredItems (FuzzyState items _ needle) =
-    V.filter (subsequenceMatch (T.unpack needle) . itemToString . fst)
-             (V.zip items (V.enumFromTo 0 (V.length items)))
+    V.map
+        (\(_score, item, index) -> (item, index))
+        (sortByScore
+            (V.filter
+                ((> 0) . fst3)
+                (V.zip3
+                    scores
+                    items
+                    (V.enumFromTo 0 (V.length items)))))
+    where
+        fst3 (x, _, _) = x
+        scores = V.fromList (fmap snd (scoreAll needle (V.toList (V.map itemToText items))))
+        sortByScore v = runST $ do
+            mv <- V.thaw v
+            Introsort.sortBy (comparing fst3) mv
+            V.freeze mv
 
 modifyE :: (FuzzyState -> FuzzyState) -> EditorM ()
 modifyE f = do
