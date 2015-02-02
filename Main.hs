@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -imodules #-}
 
-import Control.Lens hiding (argument, imap)
+import Control.Lens hiding (Action, argument, imap)
 import Control.Monad.State hiding (state)
 import Data.List (intersperse)
 import System.Console.Docopt
