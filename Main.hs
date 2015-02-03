@@ -8,6 +8,7 @@ import System.Console.Docopt
 import System.Environment
 
 import Yi hiding (super)
+import Yi.Modes (gnuMakeMode)
 import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
@@ -93,4 +94,7 @@ prefIndent = onMode $ \m ->
             }}
 
 myModes :: Config -> [AnyMode]
-myModes cfg = AnyMode rainbowParenMode : modeTable cfg
+myModes cfg
+    = AnyMode gnuMakeMode
+    : AnyMode rainbowParenMode
+    : modeTable cfg
