@@ -14,7 +14,7 @@ import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
 
-import Fuzzy
+import FuzzyFile
 import Make
 import RainbowMode
 
@@ -69,7 +69,7 @@ myBindings eval =
        , nmap "<Tab>" nextTabE
        , nmap " " (eval ":nohlsearch<CR>")
        , nmap ";" (eval ":")
-       , nmapY "<C-;>" fuzzyOpen
+       , nmapY "<C-;>" fuzzyFile
        , nmap "<M-l>" (withCurrentBuffer (transposeB unitWord Forward >> leftB))
        , nmap "<M-h>" (withCurrentBuffer (transposeB unitWord Backward))
        , nmap "<C-@>" showErrorE

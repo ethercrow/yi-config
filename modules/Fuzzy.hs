@@ -1,27 +1,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_HADDOCK show-extensions #-}
 
--- |
--- Module      :  Yi.Fuzzy
--- License     :  GPL-2
--- Maintainer  :  yi-devel@googlegroups.com
--- Stability   :  experimental
--- Portability :  portable
---
--- This file aims to provide (the essential subset of) the same functionality
--- that vim plugins ctrlp and command-t provide.
---
--- Setup:
---
---   Add something like this to your config:
---
---     (ctrlCh 'p' ?>>! fuzzyOpen)
---
--- Usage:
+--| Keymap:
 --
 --   <C-p> (or whatever mapping user chooses) starts fuzzy open dialog.
 --
@@ -41,33 +24,28 @@
 --   TODO if need arises: factor out generic part that captures a pattern of
 --   having an interactive minibuffer and a window that just renders some state.
 
-module Fuzzy (fuzzyOpen) where
+module Fuzzy
+    ( FuzzyItem (..)
+    , genericFuzzy
+    ) where
 
-import           Control.Applicative
-import           Control.Monad
-import           Control.Monad.Base
-import           Control.Monad.ST
-import           Control.Monad.State (gets)
-import           Data.Binary
-import           Data.Default
-import           Data.List (isInfixOf, isSuffixOf)
-import qualified Data.Map.Strict as M
-import           Data.Monoid
-import           Data.Ord (comparing)
+import Control.Applicative
+import Control.Monad.ST
+import Data.Binary
+import Data.Default
+import Data.Foldable (Foldable, toList)
+import Data.Monoid
+import Data.Ord (comparing)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import           Data.Typeable
+import Data.Typeable
 import qualified Data.Vector as V
 import qualified Data.Vector.Algorithms.Intro as Introsort
-import           GHC.Generics
-import           System.Directory (doesDirectoryExist, getDirectoryContents)
-import           System.FilePath ((</>))
 
-import           Yi
-import           Yi.MiniBuffer
+import Yi
+import Yi.MiniBuffer
 import qualified Yi.Rope as R
-import           Yi.Types
-import           Yi.Utils ()
+import Yi.Types
+import Yi.Utils ()
 
 import FuzzyMatchScore
 
@@ -76,64 +54,23 @@ data FuzzyState = FuzzyState
     { _fsItems :: !(V.Vector FuzzyItem)
     , fsSelectedIndex :: !(Maybe Int)
     , fsNeedle :: !T.Text
-    } deriving (Show, Generic, Typeable)
+    } deriving (Typeable)
 
-data FuzzyItem
-    = FileItem { _filePath :: !FilePath }
-    | BufferItem { _bufferIdent :: !BufferId }
-    deriving (Show, Typeable)
+data FuzzyItem = FuzzyItem
+    { fiAction :: YiM ()
+    , fiToText :: T.Text
+    }
 
-itemToText :: FuzzyItem -> T.Text
-itemToText (FileItem x) = T.pack x
-itemToText (BufferItem (MemBuffer x))  = x
-itemToText (BufferItem (FileBuffer x))  = T.pack x
-
-fuzzyOpen :: YiM ()
-fuzzyOpen = do
-    fileList <- fmap (fmap FileItem)
-                     (liftBase (getRecursiveContents "."))
-    bufList <- fmap (fmap (BufferItem . ident . attributes))
-                    (withEditor (gets (M.elems . buffers)))
+genericFuzzy :: Foldable f => f FuzzyItem -> YiM ()
+genericFuzzy items = do
     promptRef <- withEditor (spawnMinibufferE "" (const localKeymap))
     let initialState =
-            FuzzyState (V.fromList (fileList <> bufList))
+            FuzzyState (V.fromList (toList items))
                        (Just 0)
                        ""
     withGivenBuffer promptRef $ do
         putBufferDyn initialState
     withEditor (renderE initialState)
-
--- shamelessly stolen from Chapter 9 of Real World Haskell
--- takes about 3 seconds to traverse linux kernel, which is not too outrageous
--- TODO: check if it works at all with cyclic links
--- TODO: perform in background, limit file count or directory depth
-getRecursiveContents :: FilePath -> IO [FilePath]
-getRecursiveContents topdir = do
-    names <- getDirectoryContents topdir
-    let properNames = filter predicate names
-        predicate fileName = and
-            [ fileName `notElem` [".", "..", ".git", ".svn"]
-            , not (".hi" `isSuffixOf` fileName)
-            , not ("-boot" `isSuffixOf` fileName)
-            , not (".dyn_hi" `isSuffixOf` fileName)
-            , not (".dyn_o" `isSuffixOf` fileName)
-            , not (".p_hi" `isSuffixOf` fileName)
-            , not (".p_o" `isSuffixOf` fileName)
-            , not (".o" `isSuffixOf` fileName)
-            , not (".swp" `isSuffixOf` fileName)
-            , not (".beam" `isSuffixOf` fileName)
-            , not (".pyc" `isSuffixOf` fileName)
-            , not ("~" `isSuffixOf` fileName)
-            , not ("dist/build/" `isInfixOf` fileName)
-            , not (".eunit" `isInfixOf` fileName)
-            ]
-    paths <- forM properNames $ \name -> do
-        let path = topdir </> name
-        isDirectory <- doesDirectoryExist path
-        if isDirectory
-            then getRecursiveContents path
-            else return [path]
-    return (concat paths)
 
 localKeymap :: Keymap
 localKeymap =
@@ -189,7 +126,7 @@ filteredItems (FuzzyState items _ needle) =
                     (V.enumFromTo 0 (V.length items)))))
     where
         fst3 (x, _, _) = x
-        scores = V.fromList (fmap snd (scoreAll needle (V.toList (V.map itemToText items))))
+        scores = V.fromList (fmap snd (scoreAll needle (V.toList (V.map fiToText items))))
         sortByScore v = runST $ do
             mv <- V.thaw v
             Introsort.sortBy (comparing (negate . fst3)) mv
@@ -228,11 +165,8 @@ renderE fs@(FuzzyState _ selIndex _) = do
         -- TODO justify to actual screen width
         renderItem (item, itemIndex) = mconcat
             [ (if Just itemIndex == selIndex then "* " else "  ")
-            , renderItem' item
+            , fiToText item
             ]
-        renderItem' (FileItem x) = "File  " <> T.pack x
-        renderItem' (BufferItem (MemBuffer x)) = "Buffer  " <> x
-        renderItem' (BufferItem (FileBuffer x)) = "Buffer  " <> T.pack x
     setStatus (content, defaultStyle)
 
 openInThisWindow :: YiM ()
@@ -250,17 +184,10 @@ openRoutine preOpenAction = do
     case mselIndex of
         Nothing -> printMsg "Nothing selected"
         Just selIndex -> do
-            let action = case items V.! selIndex of
-                    FileItem x -> void (editFile x)
-                    BufferItem x -> withEditor $ do
-                        bufs <- gets (M.assocs . buffers)
-                        case filter ((== x) . ident . attributes . snd) bufs of
-                            [] -> error ("Couldn't find buffer" <> show x)
-                            (bufRef, _) : _ -> switchToBufferE bufRef
             withEditor $ do
                 cleanupE
                 preOpenAction
-            action
+            fiAction (items V.! selIndex)
 
 insertChar :: Keymap
 insertChar = textChar >>= write . insertB
@@ -268,28 +195,12 @@ insertChar = textChar >>= write . insertB
 cleanupE :: EditorM ()
 cleanupE = clrStatus >> closeBufferAndWindowE
 
-instance Binary FuzzyItem where
-    put (FileItem x) = put (0 :: Int) >> put x
-    put (BufferItem x) = put (1 :: Int) >> put x
-    get = do
-        tag :: Int <- get
-        case tag of
-            0 -> liftM FileItem get
-            1 -> liftM BufferItem get
-            _ -> error "Unexpected FuzzyItem Binary."
-
+-- Let's survive without reloading editor in the middle of fuzzy open for now
 instance Binary FuzzyState where
-    put (FuzzyState items index needle) = do
-        put (V.length items)
-        V.mapM_ put items
-        put index
-        put (T.encodeUtf8 needle)
-    get = do
-        itemCount <- get
-        items <- liftM V.fromList (replicateM itemCount get)
-        liftM2 (FuzzyState items) get (liftM T.decodeUtf8 get)
+    put (FuzzyState _items _index _needle) = return ()
+    get = return def
 
 instance Default FuzzyState where
-    def = error "I can't think of any sane implementation."
+    def = FuzzyState mempty Nothing mempty
 
 instance YiVariable FuzzyState
