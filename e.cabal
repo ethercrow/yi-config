@@ -17,7 +17,7 @@ executable e
     , containers
     , data-default
     , directory
-    , docopt
+    , docopt >= 0.7
     , filepath
     , lens
     , mtl

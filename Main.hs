@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -imodules #-}
 
 import Control.Lens hiding (Action, argument, imap)
@@ -17,21 +18,20 @@ import Fuzzy
 import Make
 import RainbowMode
 
+help :: Docopt
+help = [docopt|
+    Usage:
+      e [<file> ...]
+      e (-h|--help)
 
-usage :: String
-usage = unlines
-    [ "Usage: "
-    , "  e [<file> ...]"
-    , "  e (-h|--help)"
-    , ""
-    , "Options:"
-    , "  -h,--help      Show usage"
-    ]
+    Options:
+      -h,--help      Show usage
+|]
 
 main :: IO ()
 main = do
-    args <- optionsWithUsage usage =<< getArgs
-    let files = getAllArgs args (argument "<file>")
+    args <- parseArgsOrExit help =<< getArgs
+    let files = getAllArgs args (argument "file")
         actions = intersperse (EditorA newTabE) (map (YiA . openNewFile) files)
     startEditor (myConfig actions) Nothing
 
