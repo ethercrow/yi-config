@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_HADDOCK show-extensions #-}
 
---| Keymap:
+-- Keymap:
 --
 --   <C-p> (or whatever mapping user chooses) starts fuzzy open dialog.
 --

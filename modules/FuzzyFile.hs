@@ -1,5 +1,5 @@
 
---|
+--
 --  This file aims to provide (the essential subset of) the same functionality
 --  that vim plugins ctrlp and command-t provide.
 --
@@ -7,7 +7,7 @@
 --
 --    Add something like this to your config:
 --
---      (ctrlCh 'p' ?>>! fuzzyOpen)
+--      (ctrlCh 'p' ?>>! fuzzyFile)
 --
 
 module FuzzyFile

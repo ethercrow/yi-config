@@ -5,6 +5,7 @@
 import Control.Lens hiding (Action, argument, imap)
 import Control.Monad.State hiding (state)
 import Data.List (intersperse)
+import qualified Data.Text as T
 import System.Console.Docopt
 import System.Environment
 
@@ -15,7 +16,9 @@ import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
 
 import FuzzyFile
+-- import FuzzySnippet
 import Make
+-- import MySnippets
 import RainbowMode
 
 help :: Docopt
@@ -37,7 +40,10 @@ main = do
 
 myConfig :: [Action] -> Config
 myConfig actions = defaultVimConfig
-    { modeTable = fmap prefIndent (myModes defaultVimConfig)
+    { modeTable =
+        fmap
+            (configureModeline . configureIndent)
+            (myModes defaultVimConfig)
     , defaultKm = myKeymapSet
     , configCheckExternalChangesObsessively = False
     , startActions =
@@ -60,9 +66,9 @@ myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]
 myBindings eval =
     let nmap x y = V.mkStringBindingE V.Normal V.Drop (x, y, id)
         nmapY x y = V.mkStringBindingY V.Normal (x, y, id)
-        _imap x y = V.VimBindingE (\evs state -> case V.vsMode state of
+        imapY x y = V.VimBindingY (\evs state -> case V.vsMode state of
                                     V.Insert _ ->
-                                        fmap (const (y >> return V.Continue))
+                                        fmap (const (y >> return V.Drop))
                                              (evs `V.matchesString` x)
                                     _ -> V.NoMatch)
     in [ nmap "<BS>" previousTabE
@@ -74,6 +80,7 @@ myBindings eval =
        , nmap "<M-h>" (withCurrentBuffer (transposeB unitWord Backward))
        , nmap "<C-@>" showErrorE
        , nmap "<M-d>" debug
+       -- , imapY "<C-j>" (fuzzySnippet =<< mySnippets)
        ]
 
 colemakRelayout :: Char -> Char
@@ -82,8 +89,8 @@ colemakRelayout = V.relayoutFromTo colemakLayout qwertyLayout
         colemakLayout = concat ["qwfpgjluy;[]", "arstdhneio'\\", "zxcvbkm,./"]
         qwertyLayout = concat ["qwertyuiop[]", "asdfghjkl;'\\", "zxcvbnm,./"]
 
-prefIndent :: AnyMode -> AnyMode
-prefIndent = onMode $ \m ->
+configureIndent :: AnyMode -> AnyMode
+configureIndent = onMode $ \m ->
     if m ^. modeNameA == "Makefile"
     then m
     else m
@@ -93,8 +100,29 @@ prefIndent = onMode $ \m ->
             , tabSize = 4
             }}
 
+configureModeline :: AnyMode -> AnyMode
+configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
+    where
+    myModeLine prefix = do
+        (line, col) <- getLineAndCol
+        ro <- use readOnlyA
+        mode <- gets (withMode0 modeName)
+        unchanged <- gets isUnchangedBuffer
+        file <- gets (shortIdentString (length prefix))
+        return $ T.unwords
+            [ if ro then "RO" else ""
+            , if unchanged then "--" else "**"
+            , file
+            , "L", showT line
+            , "C", showT col
+            , mode
+            ]
+
 myModes :: Config -> [AnyMode]
 myModes cfg
     = AnyMode gnuMakeMode
     : AnyMode rainbowParenMode
     : modeTable cfg
+
+showT :: Show a => a -> T.Text
+showT = T.pack . show

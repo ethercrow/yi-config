@@ -19,6 +19,7 @@ executable e
     , directory
     , docopt >= 0.7
     , filepath
+    , free
     , lens
     , mtl
     , parallel
