@@ -5,7 +5,6 @@
 
 -- TODO:
 -- 
---  * action for jumping to the next error in current buffer
 --  * fuzzy-open dialog for error list
 --  * Somehow mark tabs with errors. Maybe with color or with a '!'.
 --  * Show error number in modeline
@@ -15,7 +14,14 @@
 --  * If user runs :make first and then opens a file for which errors
 --    were emitted, there is no error highlighting in that new buffer.
 
-module Make where
+module Make
+    ( debug
+    , exMake
+    , exMakePrgOption
+    , guessMakePrg
+    , jumpToNextErrorE
+    , showErrorE
+    ) where
 
 import Control.Applicative
 import Control.Concurrent
@@ -26,8 +32,9 @@ import Control.Monad.Reader
 import Data.Binary
 import Data.Default
 import Data.Foldable (Foldable, toList, find)
-import Data.List (isSuffixOf)
+import Data.List (isSuffixOf, sortBy)
 import Data.Monoid
+import Data.Ord (comparing, Down (..))
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -39,6 +46,7 @@ import System.Exit
 import System.Process
 
 import Yi
+import Yi.Buffer (Overlay (..))
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
@@ -49,9 +57,33 @@ import Yi.Window (width)
 
 import Warning
 
-jumpToNextErrorE :: EditorM ()
-jumpToNextErrorE = do
-    printMsg "Not implemented"
+overlayName = "make"
+
+jumpToNextErrorE :: Direction -> EditorM ()
+jumpToNextErrorE dir = do
+    p <- withCurrentBuffer pointB
+    let (comp, behind) = case dir of
+            Forward ->
+                (comparing overlayBegin, (<= p))
+            Backward ->
+                (comparing (Down . overlayBegin), (>= p))
+    overlays <-
+        fmap
+            (sortBy comp . toList)
+            (withCurrentBuffer (getOverlaysOfOwnerB overlayName))
+    case overlays of
+        [] -> printMsg "No errors in this file"
+        firstOverlay : _ -> do
+            let overlaysBelow =
+                    dropWhile
+                        (behind . markPoint . overlayBegin)
+                        overlays
+                dst = (markPoint . overlayBegin)
+                    (case overlaysBelow of
+                        [] -> firstOverlay
+                        o : _ -> o)
+            withCurrentBuffer (moveTo dst)
+            showErrorE
 
 debug :: EditorM ()
 debug = do
@@ -78,8 +110,8 @@ exMake "make" = Just (V.impureExCommand{V.cmdAction = YiA make})
 exMake "wm" = Just (V.impureExCommand{V.cmdAction = YiA (viWrite >> make)})
 exMake _ = Nothing
 
-exMakePrg :: V.EventString -> Maybe V.ExCommand
-exMakePrg = V.parseTextOption "makeprg" $ \case
+exMakePrgOption :: V.EventString -> Maybe V.ExCommand
+exMakePrgOption = V.parseTextOption "makeprg" $ \case
     V.TextOptionAsk -> EditorA $ do
         makePrg <- getEditorDyn
         printMsg $ "makeprg = " <> unMakePrg makePrg

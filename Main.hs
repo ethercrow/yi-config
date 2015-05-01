@@ -60,7 +60,8 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
     in super
         { V.vimBindings = myBindings eval ++ V.vimBindings super
         , V.vimRelayout = colemakRelayout
-        , V.vimExCommandParsers = exMake : exMakePrg : V.vimExCommandParsers super
+        , V.vimExCommandParsers =
+            exMake : exMakePrgOption : V.vimExCommandParsers super
         }
 
 myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]
@@ -79,8 +80,11 @@ myBindings eval =
        , nmapY "<C-;>" fuzzyFile
        , nmap "<M-l>" (withCurrentBuffer (transposeB unitWord Forward >> leftB))
        , nmap "<M-h>" (withCurrentBuffer (transposeB unitWord Backward))
+
        , nmap "<C-@>" showErrorE
        , nmap "<M-d>" debug
+       , nmap "s" (jumpToNextErrorE Forward)
+
        -- , imapY "<C-j>" (fuzzySnippet =<< mySnippets)
        ]
 
@@ -109,11 +113,11 @@ configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
         ro <- use readOnlyA
         mode <- gets (withMode0 modeName)
         unchanged <- gets isUnchangedBuffer
-        file <- gets (shortIdentString (length prefix))
+        filename <- gets (shortIdentString (length prefix))
         return $ T.unwords
             [ if ro then "RO" else ""
             , if unchanged then "--" else "**"
-            , file
+            , filename
             , "L", showT line
             , "C", showT col
             , mode
