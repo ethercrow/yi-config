@@ -50,6 +50,7 @@ myConfig actions = defaultVimConfig
         (EditorA (do
             e <- get
             put e { maxStatusHeight = 30 }))
+        : YiA guessMakePrg
         : actions
     }
 

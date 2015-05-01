@@ -26,6 +26,7 @@ import Control.Monad.Reader
 import Data.Binary
 import Data.Default
 import Data.Foldable (Foldable, toList, find)
+import Data.List (isSuffixOf)
 import Data.Monoid
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -115,7 +116,7 @@ make = do
             case T.words (unMakePrg makeprg) of
                 [] -> error "empty makeprg"
                 ws -> fmap T.unpack ws
-    printMsg "Launching make process"
+    printMsg ("Launching " <> unMakePrg makeprg)
     x <- ask
     void . io . forkIO $ do
         (code, out, err) <- readProcessWithExitCode cmd args ""
@@ -135,9 +136,20 @@ make = do
                                         warnings
                             _ -> return ()
                 case code of
-                    ExitSuccess -> printMsg "Make finished successfully."
+                    ExitSuccess ->
+                        printMsg (unMakePrg makeprg <> " finished successfully.")
                     _ -> printMsg "Make failed"
         yiOutput x MustRefresh [EditorA action]
+
+guessMakePrg :: YiM ()
+guessMakePrg = do
+    files <- io (getDirectoryContents ".")
+    let makePrg =
+            if "Makefile" `elem` files then "make"
+            else if "Shakefile" `elem` files then "shake"
+            else if any (".cabal" `isSuffixOf`) files then "cabal build"
+            else "make"
+    withEditor (putEditorDyn (MakePrg makePrg))
 
 parseWarningStorage :: String -> WarningStorage
 parseWarningStorage =
