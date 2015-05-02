@@ -5,6 +5,7 @@
 import Control.Lens hiding (Action, argument, imap)
 import Control.Monad.State hiding (state)
 import Data.List (intersperse)
+import Data.Monoid
 import qualified Data.Text as T
 import System.Console.Docopt
 import System.Environment
@@ -114,6 +115,7 @@ configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
         mode <- gets (withMode0 modeName)
         unchanged <- gets isUnchangedBuffer
         filename <- gets (shortIdentString (length prefix))
+        errorCount <- errorCountB
         return $ T.unwords
             [ if ro then "RO" else ""
             , if unchanged then "--" else "**"
@@ -121,6 +123,9 @@ configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
             , "L", showT line
             , "C", showT col
             , mode
+            , if errorCount > 0
+                then (showT errorCount <> " errors")
+                else ""
             ]
 
 myModes :: Config -> [AnyMode]

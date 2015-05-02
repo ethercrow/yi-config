@@ -7,7 +7,6 @@
 -- 
 --  * fuzzy-open dialog for error list
 --  * Somehow mark tabs with errors. Maybe with color or with a '!'.
---  * Show error number in modeline
 
 -- Bugs:
 --
@@ -16,6 +15,8 @@
 
 module Make
     ( debug
+    , errorCountE
+    , errorCountB
     , exMake
     , exMakePrgOption
     , guessMakePrg
@@ -31,7 +32,7 @@ import Control.Monad.State (gets)
 import Control.Monad.Reader
 import Data.Binary
 import Data.Default
-import Data.Foldable (Foldable, toList, find)
+import Data.Foldable (Foldable, find, foldMap, toList)
 import Data.List (isSuffixOf, sortBy)
 import Data.Monoid
 import Data.Ord (comparing, Down (..))
@@ -46,7 +47,6 @@ import System.Exit
 import System.Process
 
 import Yi
-import Yi.Buffer (Overlay (..))
 import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
@@ -57,7 +57,18 @@ import Yi.Window (width)
 
 import Warning
 
+overlayName :: R.YiString
 overlayName = "make"
+
+errorCountE :: EditorM Int
+errorCountE = do
+    WarningStorage warnings <- getEditorDyn
+    return (getSum (foldMap (Sum . V.length) warnings))
+
+errorCountB :: BufferM Int
+errorCountB = do
+    overlays <- getOverlaysOfOwnerB overlayName
+    return (lengthOf folded overlays)
 
 jumpToNextErrorE :: Direction -> EditorM ()
 jumpToNextErrorE dir = do
@@ -154,7 +165,6 @@ make = do
         (code, out, err) <- readProcessWithExitCode cmd args ""
         ws@(WarningStorage warningsByBuffer) <-
             fixPathsInBufferIds (parseWarningStorage (out <> "\n" <> err))
-        writeFile "warnings" (show ws)
         let action = do
                 putEditorDyn ws
                 bufs <- fmap M.toList (gets buffers)
