@@ -110,3 +110,26 @@ case_make =
             , Warning "Makefile" 6 1 6 (-1) " recipe for target 'modules/Warning.o' failed"
             ]
     in do parseWarnings input @?= warnings
+
+case_colons_in_error_message :: Assertion
+case_colons_in_error_message =
+    let input = unlines
+            [ "modules/Snippet.hs:75:34-37:"
+            , "     Couldn't match expected type ‘WriterT"
+            , "                                     R.YiString"
+            , "                                     transformers-0.3.0.0:Data.Functor.Identity.Identity"
+            , "                                     a’"
+            , "                 with actual type ‘a’"
+            ]
+        warnings =
+            [ Warning "modules/Snippet.hs" 75 34 75 37
+                (T.intercalate "\n"
+                    [ ""
+                    , "     Couldn't match expected type ‘WriterT"
+                    , "                                     R.YiString"
+                    , "                                     transformers-0.3.0.0:Data.Functor.Identity.Identity"
+                    , "                                     a’"
+                    , "                 with actual type ‘a’"
+                    ])
+            ]
+    in do parseWarnings input @?= warnings

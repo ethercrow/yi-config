@@ -106,7 +106,7 @@ multilineSpan = do
     return (Warning fn l1 c1 l2 c2 msg)
 
 filename :: P.GenParser Char () FilePath
-filename = (:) <$> P.noneOf " :" <*> P.many1 (P.noneOf ":")
+filename = (:) <$> P.noneOf " :\t" <*> P.many1 (P.noneOf ":\t")
 
 message :: Parser T.Text
 message = fmap T.pack (P.many P.anyChar)

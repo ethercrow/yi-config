@@ -19,7 +19,7 @@ import qualified Yi.Keymap.Vim.Utils as V
 import FuzzyFile
 -- import FuzzySnippet
 import Make
--- import MySnippets
+import MySnippets
 import RainbowMode
 
 help :: Docopt

@@ -40,7 +40,7 @@ executable e
 Test-Suite warningtest
   type: exitcode-stdio-1.0
   main-is: WarningTest.hs
-  hs-source-dirs: modules, .
+  hs-source-dirs: modules, test
   ghc-options: -threaded -Wall -ferror-spans
   default-language:    Haskell2010
   build-depends:
@@ -52,3 +52,24 @@ Test-Suite warningtest
     , tasty-th
     , text
     , yi >= 0.11.2
+
+Test-Suite snippettest
+  type: exitcode-stdio-1.0
+  main-is: SnippetTest.hs
+  hs-source-dirs: modules, test
+  ghc-options: -threaded -Wall -ferror-spans
+  default-language:    Haskell2010
+  build-depends:
+      base >=4.6 && <4.9
+    , binary
+    , containers
+    , data-default
+    , free
+    , mtl
+    , parsec
+    , tasty
+    , tasty-hunit
+    , tasty-th
+    , text
+    , yi >= 0.11.2
+    , yi-rope

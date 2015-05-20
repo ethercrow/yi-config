@@ -1,103 +1,150 @@
 {-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GADTs #-}
 
 module Snippet
-    ( expandSnippet
-    , Snippet (..)
-    , SnipM
+    ( Snippet (..)
+    , Var
+    , VarValue (..)
+    , SnippetBody
+    , EditState
+    , EditAction (..)
+    , initialEditState
     , lit
-    , finish
-    , refer
-    , place
     , line
     , nl
+    , place
+    , refer
+    , finish
     , mirror
+    , renderSnippet
+    , collectVars
+    , advanceEditState
     ) where
 
-import Control.Applicative
 import Control.Monad
-import Control.Monad.State
-import Data.Maybe (listToMaybe)
+import Control.Monad.Free
+import Control.Monad.State hiding (state)
+import Control.Monad.Writer
 import qualified Data.Map.Strict as M
-import Data.Monoid
-import Data.String
-import qualified Data.Text as T
-
-import Yi
-import qualified Yi.Rope
+import Data.Maybe
 import qualified Yi.Rope as R
 
-data Snippet = Snippet
-    { snipTrigger :: !T.Text
-    , snipBody :: SnipM ()
-    }
+data Snippet = Snippet R.YiString (SnippetBody ())
 
-data Var
+type Var = Int
+data VarValue
+    = DefaultValue R.YiString
+    | CustomValue R.YiString
+    deriving (Show, Eq)
+type Vars = M.Map Var VarValue
 
-class SnipSYM repr where
-    lit :: R.YiString -> repr
-    finish :: repr
-    place :: R.YiString -> repr
-    refer :: Var -> repr
+data SnippetBodyF a
+    = Lit R.YiString a
+    | Finish a
+    | MakeVar R.YiString (Var -> a)
+    | Refer Var (R.YiString -> a)
+    deriving Functor
 
-instance Functor SnipM where
-    fmap f (Return x) = Return (f x)
-    fmap f x = pure f <*> x
+type SnippetBody = Free SnippetBodyF
 
-instance Applicative SnipM where
-    pure = Return
-    af <*> ax = do
-        f <- af
-        x <- ax
-        return (f x)
+lit :: R.YiString -> SnippetBody ()
+lit s = liftF (Lit s ())
 
-instance Monad SnipM where
-    return = Return
-    (>>=) = Bind
+line :: R.YiString -> SnippetBody ()
+line s = lit (s <> "\n")
 
-line :: R.YiString -> SnipM ()
-line s = Write s >> nl
+nl :: SnippetBody ()
+nl = liftF (Lit "\n" ())
 
-nl :: SnipM ()
-nl = Write "\n"
+finish :: SnippetBody ()
+finish = liftF (Finish ())
 
-mirror :: Var -> SnipM ()
-mirror = Write <=< Refer
+place :: R.YiString -> SnippetBody Var
+place s = do
+    var <- liftF (MakeVar s id)
+    mirror var
+    return var
 
-lit = Write
-place = Place
-refer = Refer
-finish = Finish
+refer :: Var -> SnippetBody R.YiString
+refer var = liftF (Refer var id)
 
-expandSnippet :: Snippet -> BufferM ()
-expandSnippet (Snippet trigger body) = do
-    let env = initialEnv body
-    insertN (renderBody body env)
+mirror :: Var -> SnippetBody ()
+mirror = lit <=< refer
 
-renderBody :: SnipM () -> M.Map Var R.YiString -> R.YiString
-renderBody _ env = fromString (show env)
+data EditState = EditState
+    { sesCursorPosition :: (Maybe Var, Int)
+    , sesVars :: Vars
+    } deriving (Show, Eq)
 
-initialEnv :: SnipM () -> M.Map Var R.YiString
-initialEnv body = M.fromList [(Var 0, "ohai")]
+initialEditState :: Snippet -> EditState
+initialEditState (Snippet _ body) =
+    EditState
+        (listToMaybe (M.keys vars), 0)
+        vars
+    where
+    vars = collectVars body
 
-beginPlaceholderEditing _state = return ()
+collectVars :: SnippetBody a -> Vars
+collectVars body =
+    snd (runState (iterM run body) mempty)
+    where
+    run :: SnippetBodyF (State Vars a) -> State Vars a
+    run (Lit _ rest) = rest
+    run (Finish rest) = rest
+    run (MakeVar s f) = do
+        vars <- get
+        let newVar = if M.null vars then 0 else maximum (M.keys vars) + 1
+            newVars = M.insert newVar (DefaultValue s) vars
+        put newVars
+        f newVar
+    run (Refer var f) = do
+        vars <- get
+        f (toYiString (vars M.! var))
 
--- expandSnippet (Snippet _ body) = withCurrentBuffer $ do
---     let f = "snippetFinish"
---     marks <- forM body $ \case
---         Literal s -> insertN s
---         Finish -> pointB >>= newMarkB
---     case listToMaybe marks of
---         Just _ -> do
---             m <- getMarkB (Just f)
---             moveTo . markPoint =<< getMarkValueB m
---             deleteMarkB m
---             insertN ("Just " <> R.fromString (show m))
---         _ -> do
---             insertN "Nothing"
---             return ()
+data EditAction
+    = SENext
+    | SEInsertChar Char
+    | SEBackSpace
+    | SEEscape
+
+renderSnippet :: Snippet -> EditState -> R.YiString
+renderSnippet (Snippet _ body) (EditState _ vars) = 
+    snd (runWriter (runStateT (iterM run body) (-1)))
+    where
+    run :: SnippetBodyF ((StateT Var (Writer R.YiString)) a) -> StateT Var (Writer R.YiString) a
+    run (Lit s rest) = tell s >> rest
+    run (Finish rest) = rest
+    run (MakeVar _ f) = do
+        varName <- get
+        put (varName + 1)
+        f (varName + 1)
+    run (Refer var f) = f (toYiString (vars M.! var))
+
+toYiString :: VarValue -> R.YiString
+toYiString (DefaultValue s) = s
+toYiString (CustomValue s) = s
+
+advanceEditState :: EditState -> EditAction -> EditState
+advanceEditState state@(EditState (Nothing, _) _) SENext = state
+advanceEditState (EditState (Just i, pos) vars) (SEInsertChar c) =
+    let newVars = M.adjust (insertChar c pos) i vars
+    in EditState (Just i, pos + 1) newVars
+advanceEditState (EditState (Just i, pos) vars) SEBackSpace =
+    let newVars = M.adjust (backspace pos) i vars
+    in EditState (Just i, pos + 1) newVars
+advanceEditState (EditState (Just i, _) vars) SENext =
+    let nextPlace = listToMaybe (dropWhile (<= i) (M.keys vars))
+    in EditState (nextPlace, 0) vars
+advanceEditState state _ = state
+
+insertChar :: Char -> Int -> VarValue -> VarValue
+insertChar c _ (DefaultValue _) = CustomValue (R.singleton c)
+insertChar c pos (CustomValue s) = CustomValue (lhs <> R.singleton c <> rhs)
+    where (lhs, rhs) = R.splitAt pos s
+
+backspace :: Int -> VarValue -> VarValue
+backspace _ (DefaultValue _) = CustomValue mempty
+backspace 0 v = v
+backspace pos (CustomValue s) = CustomValue (lhs <> R.drop 1 rhs)
+    where (lhs, rhs) = R.splitAt (pos - 1) s

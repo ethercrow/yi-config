@@ -22,3 +22,4 @@ install:
 
 script:
  - cabal-$CABALVER install -j1
+ - cabal-$CABALVER test
