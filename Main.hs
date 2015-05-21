@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -imodules #-}
 
-import Control.Lens hiding (Action, argument, imap)
+import Control.Lens hiding (argument, imap)
 import Control.Monad.State hiding (state)
 import Data.List (intersperse)
 import Data.Monoid
@@ -17,8 +17,8 @@ import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
 
 import FuzzyFile
--- import FuzzySnippet
 import Make
+import qualified Snippet
 import MySnippets
 import RainbowMode
 
@@ -85,6 +85,8 @@ myBindings eval =
        , nmap "<C-@>" showErrorE
        , nmap "<M-d>" debug
        , nmap "s" (jumpToNextErrorE Forward)
+       , imapY "<C-f>"
+           (withCurrentBuffer (Snippet.expandSnippetB mySnippets))
 
        -- , imapY "<C-j>" (fuzzySnippet =<< mySnippets)
        ]

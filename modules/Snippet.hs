@@ -20,6 +20,7 @@ module Snippet
     , renderSnippet
     , collectVars
     , advanceEditState
+    , expandSnippetB
     ) where
 
 import Control.Monad
@@ -28,9 +29,14 @@ import Control.Monad.State hiding (state)
 import Control.Monad.Writer
 import qualified Data.Map.Strict as M
 import Data.Maybe
+
+import Yi.Buffer
 import qualified Yi.Rope as R
 
-data Snippet = Snippet R.YiString (SnippetBody ())
+data Snippet = Snippet
+    { snipTrigger :: R.YiString
+    , snipBody :: SnippetBody ()
+    }
 
 type Var = Int
 data VarValue
@@ -148,3 +154,14 @@ backspace _ (DefaultValue _) = CustomValue mempty
 backspace 0 v = v
 backspace pos (CustomValue s) = CustomValue (lhs <> R.drop 1 rhs)
     where (lhs, rhs) = R.splitAt (pos - 1) s
+
+expandSnippetB :: [Snippet] -> BufferM Bool
+expandSnippetB snippets = do
+    trigger <- readPrevWordB
+    let match = listToMaybe (filter ((== trigger) . snipTrigger) snippets)
+    case match of
+        Just snip -> do
+            deleteB unitWord Backward
+            insertN (renderSnippet snip (initialEditState snip))
+            return True
+        _ -> return False
