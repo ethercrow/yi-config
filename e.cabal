@@ -65,6 +65,7 @@ Test-Suite snippettest
     , containers
     , data-default
     , free
+    , lens
     , mtl
     , parsec
     , tasty

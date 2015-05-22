@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
@@ -24,14 +26,22 @@ module Snippet.Internal
     , expandSnippetB
     ) where
 
+import Control.Lens
 import Control.Monad.Free
 import Control.Monad.State hiding (state)
 import Control.Monad.Writer
+import Data.Binary (Binary)
+import Data.Default
 import qualified Data.Map.Strict as M
 import Data.Maybe
+import Data.Typeable
+import GHC.Generics
 
 import Yi.Buffer
+import Yi.Keymap
+import Yi.Keymap.Keys
 import qualified Yi.Rope as R
+import Yi.Types (YiVariable)
 
 data Snippet = Snippet
     { snipTrigger :: R.YiString
@@ -42,7 +52,12 @@ type Var = Int
 data VarValue
     = DefaultValue R.YiString
     | CustomValue R.YiString
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
+
+instance Binary VarValue
+instance Default VarValue where
+    def = DefaultValue def
+
 type Vars = M.Map Var VarValue
 
 data SnippetBodyF a
@@ -82,7 +97,12 @@ mirror var = liftF (Mirror var ())
 data EditState = EditState
     { sesCursorPosition :: (Maybe Var, Int)
     , sesVars :: Vars
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic, Typeable)
+
+instance Binary EditState
+instance Default EditState where
+    def = EditState (Nothing, 0) def
+instance YiVariable EditState
 
 initialEditState :: Snippet -> EditState
 initialEditState (Snippet _ body) =
@@ -184,10 +204,39 @@ expandSnippetB snippets = do
     let match = listToMaybe (filter ((== trigger) . snipTrigger) snippets)
     case match of
         Just snip -> do
-            deleteB unitWord Backward
-            Point origin <- pointB
-            let (offset, s) = renderSnippet snip (initialEditState snip)
-            insertN s
-            moveTo (Point (origin + offset))
+            beginEditingSnippetB snip
             return True
         _ -> return False
+
+beginEditingSnippetB :: Snippet -> BufferM ()
+beginEditingSnippetB snip = do
+    deleteB unitWord Backward
+    Point origin <- pointB
+    putBufferDyn (initialEditState snip)
+    oldKeymap <- gets (withMode0 modeKeymap)
+
+    let (offset, s) = renderSnippet snip (initialEditState snip)
+    insertN s
+    moveTo (Point (origin + offset))
+
+    let go action = do
+            editState <- getBufferDyn
+
+            let nextEditState = advanceEditState editState action
+                (_, prevS) = renderSnippet snip editState
+            moveTo (Point origin)
+            deleteN (R.length prevS)
+
+            let (offset, s) = renderSnippet snip nextEditState
+            insertN s
+            moveTo (Point (origin + offset))
+
+            case nextEditState of
+                EditState (Just _, _) _ -> putBufferDyn nextEditState
+                _ -> modifyMode $ modeKeymapA .~ oldKeymap
+    modifyMode $ modeKeymapA .~ topKeymapA .~ choice
+        [ printableChar >>=! go . SEInsertChar
+        , Event KEsc [] ?>>! go SEEscape
+        , Event KTab [] ?>>! go SENext
+        , Event (KASCII 'i') [MCtrl] ?>>! go SENext
+        ]
