@@ -219,7 +219,8 @@ beginEditingSnippetB snip = do
     insertN s
     moveTo (Point (origin + offset))
 
-    let go action = do
+    let go SEEscape = modifyMode $ modeKeymapA .~ oldKeymap
+        go action = do
             editState <- getBufferDyn
 
             let nextEditState = advanceEditState editState action
@@ -238,5 +239,8 @@ beginEditingSnippetB snip = do
         [ printableChar >>=! go . SEInsertChar
         , Event KEsc [] ?>>! go SEEscape
         , Event KTab [] ?>>! go SENext
+        , Event KBS [] ?>>! go SEBackSpace
+        , Event (KASCII 'h') [MCtrl] ?>>! go SEBackSpace
+        , Event (KASCII '[') [MCtrl] ?>>! go SEEscape
         , Event (KASCII 'i') [MCtrl] ?>>! go SENext
         ]
