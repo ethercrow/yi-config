@@ -87,8 +87,6 @@ myBindings eval =
        , nmap "s" (jumpToNextErrorE Forward)
        , imapY "<C-f>"
            (withCurrentBuffer (Snippet.expandSnippetB mySnippets))
-
-       -- , imapY "<C-j>" (fuzzySnippet =<< mySnippets)
        ]
 
 colemakRelayout :: Char -> Char

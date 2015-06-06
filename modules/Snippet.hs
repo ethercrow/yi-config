@@ -10,6 +10,7 @@ module Snippet
     , refer
     , finish
     , mirror
+    , filename
     , expandSnippetB
     ) where
 

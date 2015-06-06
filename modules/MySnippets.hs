@@ -5,6 +5,10 @@ module MySnippets
     ) where
 
 import Control.Applicative
+import Data.Char (isUpper)
+import Data.Monoid
+import qualified Data.Text as T
+import System.FilePath
 
 import qualified Yi.Rope as R
 import Snippet
@@ -12,7 +16,8 @@ import Snippet
 mySnippets :: [Snippet]
 mySnippets =
     [ Snippet "m" $ do
-        lit "module " >> place "MyFile" >> nl
+        moduleName <- guessModuleName <$> refer filename
+        line ("module " <> moduleName)
         lit "    (" >> finish >> nl
         lit "    ) where"
     , Snippet "lp" $ do
@@ -49,3 +54,15 @@ mySnippets =
         lit "@implementation " >> mirror className >> nl
         line "@end"
     ]
+
+guessModuleName :: R.YiString -> R.YiString
+guessModuleName =
+    R.fromText . T.intercalate "."
+        . reverse . takeWhile isCapitalized . reverse
+        . T.splitOn "/"
+        . T.pack . dropExtension . T.unpack
+        . R.toText
+    where
+    isCapitalized s = case T.uncons s of
+        Just (c, _) -> isUpper c
+        Nothing -> False

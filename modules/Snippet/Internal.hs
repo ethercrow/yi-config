@@ -7,7 +7,7 @@
 
 module Snippet.Internal
     ( Snippet (..)
-    , Var
+    , Var (..)
     , VarValue (..)
     , SnippetBody
     , EditState (..)
@@ -24,6 +24,7 @@ module Snippet.Internal
     , collectVars
     , advanceEditState
     , expandSnippetB
+    , filename
     ) where
 
 import Control.Lens
@@ -48,12 +49,17 @@ data Snippet = Snippet
     , snipBody :: SnippetBody ()
     }
 
-type Var = Int
+data Var
+    = FilenameVar
+    | UserVar {fromVar :: Int}
+    deriving (Show, Eq, Ord, Generic)
+
 data VarValue
     = DefaultValue R.YiString
     | CustomValue R.YiString
     deriving (Show, Eq, Generic)
 
+instance Binary Var
 instance Binary VarValue
 instance Default VarValue where
     def = DefaultValue def
@@ -69,6 +75,9 @@ data SnippetBodyF a
     deriving Functor
 
 type SnippetBody = Free SnippetBodyF
+
+filename :: Var
+filename = FilenameVar
 
 lit :: R.YiString -> SnippetBody ()
 lit s = liftF (Lit s ())
@@ -121,7 +130,9 @@ collectVars body =
     run (Finish rest) = rest
     run (MakeVar s f) = do
         vars <- get
-        let newVar = if M.null vars then 0 else maximum (M.keys vars) + 1
+        let newVar = if M.null vars
+                        then (UserVar 0)
+                        else UserVar (maximum (map fromVar (M.keys vars)) + 1)
             newVars = M.insert newVar (DefaultValue s) vars
         put newVars
         f newVar
@@ -140,7 +151,7 @@ renderSnippet :: Snippet -> EditState -> (Int, R.YiString)
 renderSnippet (Snippet _ body) (EditState (maybeActiveVar, offset) vars) = 
     (either id id epos, string)
     where
-    (((), (_var, epos)), string) = runWriter (runStateT (iterM run body) (-1, Right 0))
+    (((), (_var, epos)), string) = runWriter (runStateT (iterM run body) (UserVar (-1), Right 0))
     advance :: MonadState (Var, Either Int Int) m => Int -> m ()
     advance n = modify (fmap (fmap (+ n)))
     run :: SnippetBodyF ((StateT (Var, Either Int Int) (Writer R.YiString)) a)
@@ -166,8 +177,9 @@ renderSnippet (Snippet _ body) (EditState (maybeActiveVar, offset) vars) =
         rest
     run (MakeVar _ f) = do
         (varName, pos) <- get
-        put (varName + 1, pos)
-        f (varName + 1)
+        let newVar = UserVar (fromVar varName + 1)
+        put (newVar, pos)
+        f (newVar)
     run (Refer var f) = f (toYiString (vars M.! var))
 
 toYiString :: VarValue -> R.YiString
@@ -212,10 +224,15 @@ beginEditingSnippetB :: Snippet -> BufferM ()
 beginEditingSnippetB snip = do
     deleteB unitWord Backward
     Point origin <- pointB
-    putBufferDyn (initialEditState snip)
+    filenameValue <- gets identString
+    let editState0 =
+            (\(EditState x vars) ->
+                EditState x (M.insert filename (DefaultValue (R.fromText filenameValue)) vars))
+            (initialEditState snip)
+    putBufferDyn editState0
     oldKeymap <- gets (withMode0 modeKeymap)
 
-    let (offset, s) = renderSnippet snip (initialEditState snip)
+    let (offset, s) = renderSnippet snip editState0
     insertN s
     moveTo (Point (origin + offset))
 

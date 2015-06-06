@@ -54,9 +54,9 @@ case_lp_backspace =
 case_collect_vars :: Assertion
 case_collect_vars =
     let Snippet _ body = lp
-    in collectVars body @?= M.fromList [(0, DefaultValue "OverloadedStrings")]
+    in collectVars body @?= M.fromList [(UserVar 0, DefaultValue "OverloadedStrings")]
     
 case_complete_edit_state :: Assertion
 case_complete_edit_state =
     advanceEditState (initialEditState lp) SENext
-    @?= EditState (Nothing, 0) (M.fromList [(0, DefaultValue "OverloadedStrings")])
+    @?= EditState (Nothing, 0) (M.fromList [(UserVar 0, DefaultValue "OverloadedStrings")])
