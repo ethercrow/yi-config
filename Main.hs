@@ -8,12 +8,16 @@ import Data.List (intersperse)
 import Data.Monoid
 import qualified Data.Text as T
 import System.Console.Docopt
+import System.Directory (getCurrentDirectory)
 import System.Environment
 
 import Yi hiding (super)
+import Yi.Utils (io)
 import Yi.Modes (gnuMakeMode)
 import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
+import qualified Yi.Keymap.Vim.Ex.Types as V
+import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
 
 import FuzzyFile
@@ -62,7 +66,7 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
         { V.vimBindings = myBindings eval ++ V.vimBindings super
         , V.vimRelayout = colemakRelayout
         , V.vimExCommandParsers =
-            exMake : exMakePrgOption : V.vimExCommandParsers super
+            exMake : exMakePrgOption : exPwd : V.vimExCommandParsers super
         }
 
 myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]
@@ -133,6 +137,10 @@ myModes cfg
     = AnyMode gnuMakeMode
     : AnyMode rainbowParenMode
     : modeTable cfg
+
+exPwd :: V.EventString -> Maybe V.ExCommand
+exPwd "pwd" = Just (V.impureExCommand{V.cmdAction = YiA (io getCurrentDirectory >>= printMsg . T.pack)})
+exPwd _ = Nothing
 
 showT :: Show a => a -> T.Text
 showT = T.pack . show
