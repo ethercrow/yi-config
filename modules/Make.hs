@@ -7,6 +7,8 @@
 -- 
 --  * fuzzy-open dialog for error list
 --  * Somehow mark tabs with errors. Maybe with color or with a '!'.
+--  * :make1 and :wm1 commands for compiling just current file
+--  * Distinguish errors and warnings
 
 -- Bugs:
 --
