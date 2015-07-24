@@ -116,7 +116,7 @@ case_colons_in_error_message =
     let input = unlines
             [ "modules/Snippet.hs:75:34-37:"
             , "     Couldn't match expected type ‘WriterT"
-            , "                                     R.YiString"
+            , "\t\t\t\t\tR.YiString"
             , "                                     transformers-0.3.0.0:Data.Functor.Identity.Identity"
             , "                                     a’"
             , "                 with actual type ‘a’"
@@ -126,7 +126,7 @@ case_colons_in_error_message =
                 (T.intercalate "\n"
                     [ ""
                     , "     Couldn't match expected type ‘WriterT"
-                    , "                                     R.YiString"
+                    , "\t\t\t\t\tR.YiString"
                     , "                                     transformers-0.3.0.0:Data.Functor.Identity.Identity"
                     , "                                     a’"
                     , "                 with actual type ‘a’"
