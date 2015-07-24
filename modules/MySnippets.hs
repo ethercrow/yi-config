@@ -23,13 +23,13 @@ mySnippets =
     , Snippet "lp" $ do
         lit "{-# LANGUAGE "
         _ <- place "OverloadedStrings"
-        line " #-}"
+        lit " #-}"
     , Snippet "iq" $ do
         lit "import qualified "
         moduleName <- place "Data.Map.Strict"
         lit " as "
-        abbrev <- R.filter (`elem` ['A'..'Z']) <$> refer moduleName
-        line abbrev
+        abbrev <- R.filter (`elem` ['A'..'Z']) . dropCommon <$> refer moduleName
+        lit abbrev
     , Snippet "main" $ do
         line "def main():\n    "
         finish
@@ -66,3 +66,10 @@ guessModuleName =
     isCapitalized s = case T.uncons s of
         Just (c, _) -> isUpper c
         Nothing -> False
+
+dropCommon :: R.YiString -> R.YiString
+dropCommon s =
+    case (R.split (== '.') s) of
+        [x] -> x
+        "Control" : rest -> R.intercalate "." rest
+        "Data" : rest -> R.intercalate "." rest
