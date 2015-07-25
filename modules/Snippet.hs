@@ -11,7 +11,7 @@ module Snippet
     , finish
     , mirror
     , filename
-    , expandSnippetB
+    , expandSnippetE
     ) where
 
 import Snippet.Internal

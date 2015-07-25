@@ -23,7 +23,7 @@ module Snippet.Internal
     , renderSnippet
     , collectVars
     , advanceEditState
-    , expandSnippetB
+    , expandSnippetE
     , filename
     ) where
 
@@ -39,10 +39,11 @@ import Data.Typeable
 import GHC.Generics
 
 import Yi.Buffer
+import Yi.Editor (withCurrentBuffer)
 import Yi.Keymap
 import Yi.Keymap.Keys
 import qualified Yi.Rope as R
-import Yi.Types (YiVariable)
+import Yi.Types (YiVariable, EditorM)
 
 data Snippet = Snippet
     { snipTrigger :: R.YiString
@@ -210,34 +211,37 @@ backspace 0 v = v
 backspace pos (CustomValue s) = CustomValue (lhs <> R.drop 1 rhs)
     where (lhs, rhs) = R.splitAt (pos - 1) s
 
-expandSnippetB :: [Snippet] -> BufferM Bool
-expandSnippetB snippets = do
-    trigger <- readPrevWordB
+expandSnippetE :: EditorM () -> [Snippet] -> EditorM Bool
+expandSnippetE escapeAction snippets = do
+    trigger <- withCurrentBuffer readPrevWordB
     let match = listToMaybe (filter ((== trigger) . snipTrigger) snippets)
     case match of
         Just snip -> do
-            beginEditingSnippetB snip
+            beginEditingSnippetE escapeAction snip
             return True
         _ -> return False
 
-beginEditingSnippetB :: Snippet -> BufferM ()
-beginEditingSnippetB snip = do
-    deleteB unitWord Backward
-    Point origin <- pointB
-    filenameValue <- gets identString
+beginEditingSnippetE :: EditorM () -> Snippet -> EditorM ()
+beginEditingSnippetE escapeAction snip = do
+    withCurrentBuffer (deleteB unitWord Backward)
+    Point origin <- withCurrentBuffer pointB
+    filenameValue <- withCurrentBuffer (gets identString)
     let editState0 =
             (\(EditState x vars) ->
                 EditState x (M.insert filename (DefaultValue (R.fromText filenameValue)) vars))
             (initialEditState snip)
-    putBufferDyn editState0
-    oldKeymap <- gets (withMode0 modeKeymap)
+    withCurrentBuffer (putBufferDyn editState0)
+    oldKeymap <- withCurrentBuffer (gets (withMode0 modeKeymap))
 
-    let (offset, s) = renderSnippet snip editState0
-    insertN s
-    moveTo (Point (origin + offset))
+    withCurrentBuffer $ do
+        let (offset, s) = renderSnippet snip editState0
+        insertN s
+        moveTo (Point (origin + offset))
 
-    let go SEEscape = modifyMode $ modeKeymapA .~ oldKeymap
-        go action = do
+    let go SEEscape = do
+            withCurrentBuffer (modifyMode $ modeKeymapA .~ oldKeymap)
+            escapeAction
+        go action = withCurrentBuffer $ do
             editState <- getBufferDyn
 
             let nextEditState = advanceEditState editState action
@@ -252,7 +256,7 @@ beginEditingSnippetB snip = do
             case nextEditState of
                 EditState (Just _, _) _ -> putBufferDyn nextEditState
                 _ -> modifyMode $ modeKeymapA .~ oldKeymap
-    modifyMode $ modeKeymapA .~ topKeymapA .~ choice
+    withCurrentBuffer $ modifyMode $ modeKeymapA .~ topKeymapA .~ choice
         [ printableChar >>=! go . SEInsertChar
         , Event KEsc [] ?>>! go SEEscape
         , Event KTab [] ?>>! go SENext

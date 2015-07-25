@@ -12,6 +12,7 @@
 
 -- Bugs:
 --
+--  * Sometimes unsuccessful :make corrupts vty rendering
 --  * If user runs :make first and then opens a file for which errors
 --    were emitted, there is no error highlighting in that new buffer.
 

@@ -16,6 +16,7 @@ import Yi.Utils (io)
 import Yi.Modes (gnuMakeMode)
 import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
+import qualified Yi.Keymap.Vim.Eval as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
@@ -89,8 +90,11 @@ myBindings eval =
        , nmap "<C-@>" showErrorE
        , nmap "<M-d>" debug
        , nmap "s" (jumpToNextErrorE Forward)
-       , imapY "<C-f>"
-           (withCurrentBuffer (Snippet.expandSnippetB mySnippets))
+       , imapY "<Tab>"
+           (withEditor $ do
+               let defEval = V.pureEval (extractValue V.defVimConfig)
+               expanded <- Snippet.expandSnippetE (defEval "<Esc>") mySnippets 
+               when (not expanded) (defEval "<Tab>"))
        ]
 
 colemakRelayout :: Char -> Char
