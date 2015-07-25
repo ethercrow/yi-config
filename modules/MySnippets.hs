@@ -40,12 +40,12 @@ mySnippets =
     , Snippet "testsuite" $ do
         lit "Test-Suite " >> place "TestMain" >> nl
         line "  type: exitcode-stdio-1.0"
-        lit "  main-is " >> place "TestMain.hs" >> nl
+        lit "  main-is: " >> place "TestMain.hs" >> nl
         line "  hs-source-dirs: src, test"
         line "  ghc-options: -Wall -ferror-spans"
         line "  default-language:    Haskell2010"
         line "  build-depends:"
-        line "    base >= 4.6"
+        line "    base >= 4.8"
     , Snippet "cl" $ do
         className <-
             lit "@interface " *> place "ShinyClass" <* lit ": NSObject" <* nl
