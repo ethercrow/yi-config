@@ -47,6 +47,7 @@ import Data.Typeable
 import qualified Data.Vector as V
 import System.Directory
 import System.Exit
+import System.FilePath
 import System.Process
 
 import Yi
@@ -162,12 +163,15 @@ make = do
             case T.words (unMakePrg makeprg) of
                 [] -> error "empty makeprg"
                 ws -> fmap T.unpack ws
+        maybeCustomMakeDir = case args of
+            "-C" : d : _ -> Just d
+            _ -> Nothing
     printMsg ("Launching " <> unMakePrg makeprg)
     x <- ask
     void . io . forkIO $ do
         (code, out, err) <- readProcessWithExitCode cmd args ""
         ws@(WarningStorage warningsByBuffer) <-
-            fixPathsInBufferIds (parseWarningStorage (out <> "\n" <> err))
+            fixPathsInBufferIds maybeCustomMakeDir (parseWarningStorage (out <> "\n" <> err))
         let action = do
                 putEditorDyn ws
                 bufs <- fmap M.toList (gets buffers)
@@ -216,11 +220,15 @@ messageToOverlayB (Warning _ l1 c1 l2 c2 msg) = savingPointB $ do
     p2 <- pointB
     return (mkOverlay "make" (mkRegion p1 p2) errorStyle (R.fromText msg))
 
-fixPathsInBufferIds :: WarningStorage -> IO WarningStorage
-fixPathsInBufferIds (WarningStorage ws) =
+fixPathsInBufferIds :: Maybe FilePath -> WarningStorage -> IO WarningStorage
+fixPathsInBufferIds maybeCustomMakeDir (WarningStorage ws) =
     WarningStorage <$>
         traverseKeys
-            (\(FileBuffer path) -> FileBuffer <$> canonicalizePath path)
+            (\(FileBuffer path) -> do
+                let path' = case maybeCustomMakeDir of
+                        Just d -> d </> path
+                        Nothing -> path
+                FileBuffer <$> canonicalizePath path')
             ws
 
 traverseKeys :: (Applicative f, Ord b) => (a -> f b) -> M.Map a v -> f (M.Map b v)
