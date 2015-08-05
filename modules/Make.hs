@@ -8,11 +8,9 @@
 --  * fuzzy-open dialog for error list
 --  * Somehow mark tabs with errors. Maybe with color or with a '!'.
 --  * :make1 and :wm1 commands for compiling just current file
---  * Distinguish errors and warnings
 
 -- Bugs:
 --
---  * Sometimes unsuccessful :make corrupts vty rendering
 --  * If user runs :make first and then opens a file for which errors
 --    were emitted, there is no error highlighting in that new buffer.
 
@@ -29,6 +27,7 @@ module Make
 
 import Control.Applicative
 import Control.Concurrent
+import Control.Exception
 import Control.Lens hiding (Action)
 import Control.Monad
 import Control.Monad.State (gets)
@@ -160,35 +159,42 @@ make :: YiM ()
 make = do
     makeprg <- withEditor getEditorDyn
     let cmd : args =
+            -- TODO: T.words is insufficient to correctly split
+            --       something like "nix-shell --command 'cabal install'"
             case T.words (unMakePrg makeprg) of
                 [] -> error "empty makeprg"
                 ws -> fmap T.unpack ws
         maybeCustomMakeDir = case args of
             "-C" : d : _ -> Just d
             _ -> Nothing
+        procSpec = shell (T.unpack (unMakePrg makeprg))
     printMsg ("Launching " <> unMakePrg makeprg)
     x <- ask
     void . io . forkIO $ do
-        (code, out, err) <- readProcessWithExitCode cmd args ""
-        ws@(WarningStorage warningsByBuffer) <-
-            fixPathsInBufferIds maybeCustomMakeDir (parseWarningStorage (out <> "\n" <> err))
-        let action = do
-                putEditorDyn ws
-                bufs <- fmap M.toList (gets buffers)
-                forM_ bufs $ \(ref, buf) ->
-                    withGivenBuffer ref . retroactivelyAtSavePointB $ do
-                        delOverlaysOfOwnerB "make"
-                        case M.lookup (buf ^. identA) warningsByBuffer of
-                            Just warnings ->
-                                    V.mapM_
-                                        (addOverlayB <=< messageToOverlayB)
-                                        warnings
-                            _ -> return ()
-                case code of
-                    ExitSuccess ->
-                        printMsg (unMakePrg makeprg <> " finished successfully.")
-                    _ -> printMsg "Make failed"
-        yiOutput x MustRefresh [EditorA action]
+        possiblyException <- try $ do
+            (code, out, err) <- readCreateProcessWithExitCode procSpec ""
+            ws@(WarningStorage warningsByBuffer) <-
+                fixPathsInBufferIds maybeCustomMakeDir (parseWarningStorage (out <> "\n" <> err))
+            let style = if code == ExitSuccess then hintStyle else errorStyle
+                action = do
+                    putEditorDyn ws
+                    bufs <- fmap M.toList (gets buffers)
+                    forM_ bufs $ \(ref, buf) ->
+                        withGivenBuffer ref . retroactivelyAtSavePointB $ do
+                            delOverlaysOfOwnerB "make"
+                            case M.lookup (buf ^. identA) warningsByBuffer of
+                                Just warnings ->
+                                        V.mapM_
+                                            (addOverlayB <=< messageToOverlayB style)
+                                            warnings
+                                _ -> return ()
+                    printMsg (unMakePrg makeprg <> case code of
+                        ExitSuccess -> " finished successfully."
+                        ExitFailure f -> " failed with code " <> T.pack (show f))
+            yiOutput x MustRefresh [EditorA action]
+        case possiblyException of
+            Left e -> yiOutput x MustRefresh [EditorA (printMsg (T.pack (show (e :: SomeException))))]
+            _ -> return ()
 
 guessMakePrg :: YiM ()
 guessMakePrg = do
@@ -210,15 +216,15 @@ mapFromValues :: (Foldable f, Applicative t, Monoid (t v), Ord k)
 mapFromValues keyFun values =
     M.fromListWith (<>) (fmap (\v -> (keyFun v, pure v)) (toList values))
 
-messageToOverlayB :: Warning -> BufferM Overlay
-messageToOverlayB (Warning _ l1 c1 l2 c2 msg) = savingPointB $ do
+messageToOverlayB :: (UIStyle -> Style) -> Warning -> BufferM Overlay
+messageToOverlayB style (Warning _ l1 c1 l2 c2 msg) = savingPointB $ do
     moveToLineColB l1 (c1 - 1)
     p1 <- pointB
     if c2 >= 0
     then moveToLineColB l2 c2
     else moveToLineColB l2 0 >> moveToEol
     p2 <- pointB
-    return (mkOverlay "make" (mkRegion p1 p2) errorStyle (R.fromText msg))
+    return (mkOverlay "make" (mkRegion p1 p2) style (R.fromText msg))
 
 fixPathsInBufferIds :: Maybe FilePath -> WarningStorage -> IO WarningStorage
 fixPathsInBufferIds maybeCustomMakeDir (WarningStorage ws) =
