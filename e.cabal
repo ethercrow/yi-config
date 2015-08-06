@@ -24,7 +24,7 @@ executable e
     , mtl
     , parallel
     , parsec
-    , process
+    , process >= 1.2.3
     , regex-applicative
     , text
     , transformers-base
