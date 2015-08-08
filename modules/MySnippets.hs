@@ -46,6 +46,17 @@ mySnippets =
         line "  default-language:    Haskell2010"
         line "  build-depends:"
         line "    base >= 4.8"
+    , Snippet "testmain" $ do
+        line "{-# LANGUAGE TemplateHaskell #-}"
+        line ""
+        line "import Test.Tasty.TH"
+        line "import Test.Tasty.HUnit"
+        line ""
+        line "main :: IO ()"
+        line "main = $defaultMainGenerator"
+        line ""
+        line "case_trivial :: Assertion"
+        line "case_trivial = True @?= True"
     , Snippet "cl" $ do
         className <-
             lit "@interface " *> place "ShinyClass" <* lit ": NSObject" <* nl
