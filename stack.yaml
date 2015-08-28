@@ -1,0 +1,18 @@
+flags: {}
+packages:
+- '.'
+resolver: lts-3.2
+extra-deps:
+- charsetdetect-ae-1.0.1
+- docopt-0.7.0.2
+- dynamic-state-0.2.0.0
+- dyre-0.8.12
+- io-storage-0.3
+- oo-prototypes-0.1.0.0
+- pointedlist-0.6.1
+- vty-5.4.0
+- word-trie-0.3.0
+- xdg-basedir-0.2.2
+- yi-0.12.2
+- yi-language-0.2.0
+- yi-rope-0.7.0.1
