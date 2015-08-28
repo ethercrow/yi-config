@@ -23,6 +23,7 @@ module Make
     , guessMakePrg
     , jumpToNextErrorE
     , showErrorE
+    , insertErrorMessageE
     ) where
 
 import Control.Applicative
@@ -97,27 +98,36 @@ jumpToNextErrorE dir = do
                         [] -> firstOverlay
                         o : _ -> o)
             withCurrentBuffer (moveTo dst)
-            showErrorE
+            showOverlayMessageE firstOverlay
 
 debug :: EditorM ()
 debug = do
     ws :: WarningStorage <- getEditorDyn
     withCurrentBuffer $ insertN (R.fromString (show ws))
 
+showOverlayMessageE :: Overlay -> EditorM ()
+showOverlayMessageE overlay = do
+    winWidth <- fmap width (use currentWindowA)
+    printMsgs
+        (fmap
+            (T.justifyLeft (winWidth - 1) ' ' . R.toText)
+            (R.lines (overlayAnnotation overlay)))
+
 showErrorE :: EditorM ()
 showErrorE = do
-    maybeOverlayAtPoint <- withCurrentBuffer $ do
-        p <- pointB
-        overlays <- getOverlaysOfOwnerB "make"
-        return (find (isPointInsideOverlay p) overlays)
-    winWidth <- fmap width (use currentWindowA)
-    case maybeOverlayAtPoint of
-        Just overlay ->
-            printMsgs
-                (fmap
-                    (T.justifyLeft (winWidth - 1) ' ' . R.toText)
-                    (R.lines (overlayAnnotation overlay)))
-        Nothing -> return ()
+    maybeOverlayUnderCursor <- withCurrentBuffer maybeOverlayUnderCursorB
+    maybe (return ()) showOverlayMessageE maybeOverlayUnderCursor
+
+maybeOverlayUnderCursorB :: BufferM (Maybe Overlay)
+maybeOverlayUnderCursorB = do
+    p <- pointB
+    overlays <- getOverlaysOfOwnerB "make"
+    return (find (isPointInsideOverlay p) overlays)
+
+insertErrorMessageE :: EditorM ()
+insertErrorMessageE = do
+    mo <- withCurrentBuffer maybeOverlayUnderCursorB
+    maybe (return ()) (withCurrentBuffer . insertN . overlayAnnotation) mo
 
 exMake :: V.EventString -> Maybe V.ExCommand
 exMake "make" = Just (V.impureExCommand{V.cmdAction = YiA make})

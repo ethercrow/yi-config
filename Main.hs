@@ -20,6 +20,7 @@ import qualified Yi.Keymap.Vim.Eval as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
+import Yi.UI.Vty
 
 import FuzzyFile
 import Make
@@ -90,6 +91,7 @@ myBindings eval =
        , nmap "<C-@>" showErrorE
        , nmap "<M-d>" debug
        , nmap "s" (jumpToNextErrorE Forward)
+       , nmap "S" insertErrorMessageE
        , imapY "<Tab>"
            (withEditor $ do
                let defEval = V.pureEval (extractValue V.defVimConfig)

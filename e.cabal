@@ -30,7 +30,7 @@ executable e
     , transformers-base
     , vector
     , vector-algorithms
-    , yi >= 0.11.2
+    , yi >= 0.12.2
     , yi-rope
     , yi-language
   hs-source-dirs: modules, .
