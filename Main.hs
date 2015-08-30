@@ -27,6 +27,7 @@ import Make
 import qualified Snippet
 import MySnippets
 import RainbowMode
+import LuaMode
 
 help :: Docopt
 help = [docopt|
@@ -141,6 +142,7 @@ configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
 myModes :: Config -> [AnyMode]
 myModes cfg
     = AnyMode gnuMakeMode
+    : AnyMode luaMode
     : AnyMode rainbowParenMode
     : modeTable cfg
 

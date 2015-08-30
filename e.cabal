@@ -20,12 +20,14 @@ executable e
     , docopt >= 0.7
     , filepath
     , free
+    , language-lua
     , lens
     , mtl
     , parallel
     , parsec
     , process >= 1.2.3
     , regex-applicative
+    , srcloc
     , text
     , transformers-base
     , vector
@@ -34,7 +36,7 @@ executable e
     , yi-rope
     , yi-language
   hs-source-dirs: modules, .
-  ghc-options: -O2 -threaded -Wall -ferror-spans
+  ghc-options: -O2 -threaded -Wall -ferror-spans -fcontext-stack=110
   default-language:    Haskell2010
 
 Test-Suite warningtest

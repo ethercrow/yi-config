@@ -1,6 +1,9 @@
 flags: {}
 packages:
 - '.'
+- location:
+    git: https://github.com/mitchellwrosen/language-lua
+    commit: 53747bc3268c2bd57e33d5001ec431938da58eee
 resolver: lts-3.2
 extra-deps:
 - charsetdetect-ae-1.0.1
