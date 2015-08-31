@@ -13,7 +13,6 @@ extra-deps:
 - io-storage-0.3
 - oo-prototypes-0.1.0.0
 - pointedlist-0.6.1
-- vty-5.4.0
 - word-trie-0.3.0
 - xdg-basedir-0.2.2
 - yi-0.12.2
