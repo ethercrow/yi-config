@@ -4,7 +4,7 @@ packages:
 - location:
     git: https://github.com/mitchellwrosen/language-lua
     commit: 53747bc3268c2bd57e33d5001ec431938da58eee
-resolver: lts-3.2
+resolver: lts-3.4
 extra-deps:
 - charsetdetect-ae-1.0.1
 - docopt-0.7.0.2
@@ -18,3 +18,4 @@ extra-deps:
 - yi-0.12.2
 - yi-language-0.2.0
 - yi-rope-0.7.0.1
+- vty-5.4.0

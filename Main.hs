@@ -16,7 +16,6 @@ import Yi.Utils (io)
 import Yi.Modes (gnuMakeMode)
 import qualified Yi.Keymap.Vim as V
 import qualified Yi.Keymap.Vim.Common as V
-import qualified Yi.Keymap.Vim.Eval as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
@@ -88,11 +87,11 @@ myBindings eval =
        , nmapY "<C-;>" fuzzyFile
        , nmap "<M-l>" (withCurrentBuffer (transposeB unitWord Forward >> leftB))
        , nmap "<M-h>" (withCurrentBuffer (transposeB unitWord Backward))
-
        , nmap "<C-@>" showErrorE
        , nmap "<M-d>" debug
-       , nmap "s" (jumpToNextErrorE Forward)
-       , nmap "S" insertErrorMessageE
+       , nmapY "s" (jumpToNextErrorInCurrentBufferY Forward)
+       , nmapY "S" (jumpToNextErrorY Forward)
+       , nmap ",s" insertErrorMessageE
        , imapY "<Tab>"
            (withEditor $ do
                let defEval = V.pureEval (extractValue V.defVimConfig)

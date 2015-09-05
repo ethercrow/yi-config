@@ -13,6 +13,7 @@
 --
 --  * If user runs :make first and then opens a file for which errors
 --    were emitted, there is no error highlighting in that new buffer.
+--  * Make process is leaked on editor exit
 
 module Make
     ( debug
@@ -21,21 +22,21 @@ module Make
     , exMake
     , exMakePrgOption
     , guessMakePrg
-    , jumpToNextErrorE
+    , jumpToNextErrorInCurrentBufferY
+    , jumpToNextErrorY
     , showErrorE
     , insertErrorMessageE
     ) where
 
-import Control.Applicative
 import Control.Concurrent
 import Control.Exception
-import Control.Lens hiding (Action)
+import Control.Lens
 import Control.Monad
 import Control.Monad.State (gets)
 import Control.Monad.Reader
 import Data.Binary
 import Data.Default
-import Data.Foldable (Foldable, find, foldMap, toList)
+import Data.Foldable (find, toList)
 import Data.List (isSuffixOf, sortBy)
 import Data.Monoid
 import Data.Ord (comparing, Down (..))
@@ -74,38 +75,61 @@ errorCountB = do
     overlays <- getOverlaysOfOwnerB overlayName
     return (lengthOf folded overlays)
 
-jumpToNextErrorE :: Direction -> EditorM ()
-jumpToNextErrorE dir = do
+data Scope = CurrentBuffer | Global
+
+jumpToNextErrorInCurrentBufferY :: Direction -> YiM ()
+jumpToNextErrorInCurrentBufferY = jumpToNextErrorY' CurrentBuffer
+
+jumpToNextErrorY :: Direction -> YiM ()
+jumpToNextErrorY = jumpToNextErrorY' Global
+
+jumpToNextErrorY' :: Scope -> Direction -> YiM ()
+jumpToNextErrorY' scope dir = do
     p <- withCurrentBuffer pointB
     let (comp, behind) = case dir of
             Forward ->
                 (comparing overlayBegin, (<= p))
             Backward ->
                 (comparing (Down . overlayBegin), (>= p))
+        focusOnOverlayE o = do
+            let beginPoint = markPoint (overlayBegin o)
+            withCurrentBuffer (moveTo beginPoint)
+            showOverlayMessageE o
     overlays <-
         fmap
             (sortBy comp . toList)
             (withCurrentBuffer (getOverlaysOfOwnerB overlayName))
-    case overlays of
-        [] -> printMsg "No errors in this file"
-        firstOverlay : _ -> do
+    case (overlays, scope) of
+        ([], CurrentBuffer) -> printMsg "No errors in this file"
+        ([], Global) -> do
+            WarningStorage warnings <- getEditorDyn
+            case M.toList warnings of
+                [] -> printMsg "No errors"
+                (FileBuffer filepath, fileWarnings) : _ -> do
+                    Right _ <- editFile filepath
+                    firstOverlay <- withCurrentBuffer $ do
+                        V.mapM_
+                            (addOverlayB <=< messageToOverlayB errorStyle)
+                            fileWarnings
+                        messageToOverlayB errorStyle (V.head fileWarnings)
+                    focusOnOverlayE firstOverlay
+                (MemBuffer name, _) : _ ->
+                    error ("unexpected warning in membuffer " <> T.unpack name)
+        (firstOverlay : _, _) -> do
             let overlaysBelow =
                     dropWhile
                         (behind . markPoint . overlayBegin)
                         overlays
-                dst = (markPoint . overlayBegin)
-                    (case overlaysBelow of
+            focusOnOverlayE (case overlaysBelow of
                         [] -> firstOverlay
                         o : _ -> o)
-            withCurrentBuffer (moveTo dst)
-            showOverlayMessageE firstOverlay
 
 debug :: EditorM ()
 debug = do
     ws :: WarningStorage <- getEditorDyn
     withCurrentBuffer $ insertN (R.fromString (show ws))
 
-showOverlayMessageE :: Overlay -> EditorM ()
+showOverlayMessageE :: MonadEditor m => Overlay -> m ()
 showOverlayMessageE overlay = do
     winWidth <- fmap width (use currentWindowA)
     printMsgs
@@ -168,7 +192,7 @@ instance YiVariable WarningStorage
 make :: YiM ()
 make = do
     makeprg <- withEditor getEditorDyn
-    let cmd : args =
+    let _cmd : args =
             -- TODO: T.words is insufficient to correctly split
             --       something like "nix-shell --command 'cabal install'"
             case T.words (unMakePrg makeprg) of
