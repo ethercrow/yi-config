@@ -20,7 +20,7 @@ executable e
     , docopt >= 0.7
     , filepath
     , free
-    , language-lua
+    , language-lua2
     , lens
     , mtl
     , parallel
