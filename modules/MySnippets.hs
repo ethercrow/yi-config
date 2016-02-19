@@ -64,6 +64,11 @@ mySnippets =
         nl
         lit "@implementation " >> mirror className >> nl
         line "@end"
+    , Snippet "n" $ do
+        line "<<>>="
+        finish
+        nl
+        line "@"
     ]
 
 guessModuleName :: R.YiString -> R.YiString

@@ -2,6 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -imodules #-}
 
+import Control.Concurrent.Chan
 import Control.Lens hiding (argument, imap)
 import Control.Monad.State hiding (state)
 import Data.List (intersperse)
@@ -25,8 +26,11 @@ import FuzzyFile
 import Make
 import qualified Snippet
 import MySnippets
+
 import RainbowMode
 import LuaMode
+import PyflakesMode
+import IdrisIDE
 
 help :: Docopt
 help = [docopt|
@@ -58,6 +62,7 @@ myConfig actions = defaultVimConfig
             e <- get
             put e { maxStatusHeight = 30 }))
         : YiA guessMakePrg
+        : YiA startIdrisIDE
         : actions
     }
 
@@ -68,7 +73,8 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
         { V.vimBindings = myBindings eval ++ V.vimBindings super
         , V.vimRelayout = colemakRelayout
         , V.vimExCommandParsers =
-            exMake : exMakePrgOption : exPwd : V.vimExCommandParsers super
+            exMake : exFlakes : exMakePrgOption : exPwd :
+                exIdris : V.vimExCommandParsers super
         }
 
 myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]
@@ -80,6 +86,7 @@ myBindings eval =
                                         fmap (const (y >> return V.Drop))
                                              (evs `V.matchesString` x)
                                     _ -> V.NoMatch)
+        defEval = V.pureEval (extractValue V.defVimConfig)
     in [ nmap "<BS>" previousTabE
        , nmap "<Tab>" nextTabE
        , nmap " " (eval ":nohlsearch<CR>")
@@ -94,9 +101,9 @@ myBindings eval =
        , nmap ",s" insertErrorMessageE
        , imapY "<Tab>"
            (withEditor $ do
-               let defEval = V.pureEval (extractValue V.defVimConfig)
                expanded <- Snippet.expandSnippetE (defEval "<Esc>") mySnippets 
                when (not expanded) (defEval "<Tab>"))
+       , nmapY "<Esc>" (flakes >> withEditor (defEval "<Esc>"))
        ]
 
 colemakRelayout :: Char -> Char
@@ -142,6 +149,7 @@ myModes :: Config -> [AnyMode]
 myModes cfg
     = AnyMode gnuMakeMode
     : AnyMode luaMode
+    : AnyMode pyflakesMode
     : AnyMode rainbowParenMode
     : modeTable cfg
 

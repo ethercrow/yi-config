@@ -11,15 +11,32 @@ cabal-version:       >=1.10
 
 executable e
   main-is:             Main.hs
+  other-modules:
+      Fuzzy
+      FuzzyFile
+      FuzzyMatchScore
+      IdrisIDE
+      LuaMode
+      Make
+      MySnippets
+      PyflakesMode
+      RainbowMode
+      Snippet
+      Snippet.Internal
+      Warning
+      YiWarning
   build-depends:
       base >=4.6 && <4.9
     , binary
+    , bytestring
     , containers
     , data-default
     , directory
     , docopt >= 0.7
     , filepath
     , free
+    , ide-backend
+    , idris
     , language-lua2
     , lens
     , mtl
@@ -30,6 +47,8 @@ executable e
     , srcloc
     , text
     , transformers-base
+    , trifecta
+    , utf8-string
     , vector
     , vector-algorithms
     , yi >= 0.12.2

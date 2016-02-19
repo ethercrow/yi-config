@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- This module tries not to depend on yi
+
 module Warning
     ( Warning (..)
     , parseWarnings
