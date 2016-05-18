@@ -1,8 +1,10 @@
 flags: {}
 packages:
 - '.'
-resolver: nightly-2015-12-22
+resolver: lts-5.15
 extra-deps:
-- cheapskate-0.1.0.4
-- optparse-applicative-0.11.0.2
-- idris-0.9.20.2
+ - yi-0.12.5
+flags:
+  yi:
+      hint: false
+      pango: false

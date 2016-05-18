@@ -15,8 +15,6 @@ executable e
       Fuzzy
       FuzzyFile
       FuzzyMatchScore
-      IdrisIDE
-      LuaMode
       Make
       MySnippets
       PyflakesMode
@@ -35,9 +33,6 @@ executable e
     , docopt >= 0.7
     , filepath
     , free
-    , ide-backend
-    , idris
-    , language-lua2
     , lens
     , mtl
     , parallel

@@ -28,9 +28,7 @@ import qualified Snippet
 import MySnippets
 
 import RainbowMode
-import LuaMode
 import PyflakesMode
-import IdrisIDE
 
 help :: Docopt
 help = [docopt|
@@ -62,7 +60,6 @@ myConfig actions = defaultVimConfig
             e <- get
             put e { maxStatusHeight = 30 }))
         : YiA guessMakePrg
-        : YiA startIdrisIDE
         : actions
     }
 
@@ -74,7 +71,7 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
         , V.vimRelayout = colemakRelayout
         , V.vimExCommandParsers =
             exMake : exFlakes : exMakePrgOption : exPwd :
-                exIdris : V.vimExCommandParsers super
+                V.vimExCommandParsers super
         }
 
 myBindings :: (V.EventString -> EditorM ()) -> [V.VimBinding]
@@ -148,7 +145,6 @@ configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
 myModes :: Config -> [AnyMode]
 myModes cfg
     = AnyMode gnuMakeMode
-    : AnyMode luaMode
     : AnyMode pyflakesMode
     : AnyMode rainbowParenMode
     : modeTable cfg
