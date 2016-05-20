@@ -21,7 +21,7 @@ mySnippets =
         lit "    (" >> finish >> nl
         lit "    ) where"
     , Snippet "lp" $ do
-        lit "{-# LANGUAGE "
+        lit "{-# language "
         _ <- place "OverloadedStrings"
         lit " #-}"
     , Snippet "iq" $ do
@@ -47,7 +47,7 @@ mySnippets =
         line "  build-depends:"
         line "    base >= 4.8"
     , Snippet "testmain" $ do
-        line "{-# LANGUAGE TemplateHaskell #-}"
+        line "{-# language TemplateHaskell #-}"
         line ""
         line "import Test.Tasty.TH"
         line "import Test.Tasty.HUnit"
