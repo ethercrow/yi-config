@@ -111,6 +111,12 @@ case_make =
             ]
     in do parseWarnings input @?= warnings
 
+case_typescript :: Assertion
+case_typescript =
+    let input = "lol.ts(13,9): error TS2304: Cannot find name 'lol'."
+        warnings = [Warning "lol.ts" 13 9 13 10 " error TS2304: Cannot find name 'lol'."]
+    in do parseWarnings input @?= warnings
+
 case_colons_in_error_message :: Assertion
 case_colons_in_error_message =
     let input = unlines

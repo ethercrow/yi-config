@@ -58,6 +58,7 @@ parseWarnings input =
             [ P.try multilineSpan
             , P.try onelineSpan
             , P.try point
+            , P.try pointTypeScript
             , line
             ]
         appendMsg :: T.Text -> Warning -> Warning
@@ -72,6 +73,17 @@ point = do
     _ <- P.char ':'
     c <- number
     _ <- P.char ':'
+    msg <- message
+    return (Warning fn l c l (c + 1) msg)
+
+pointTypeScript :: P.GenParser Char () Warning
+pointTypeScript = do
+    fn <- filename
+    _ <- P.char '('
+    l <- number
+    _ <- P.char ','
+    c <- number
+    _ <- P.string "):"
     msg <- message
     return (Warning fn l c l (c + 1) msg)
 
@@ -108,7 +120,7 @@ multilineSpan = do
     return (Warning fn l1 c1 l2 c2 msg)
 
 filename :: P.GenParser Char () FilePath
-filename = (:) <$> P.noneOf " :\t" <*> P.many1 (P.noneOf ":\t")
+filename = (:) <$> P.noneOf " ():\t" <*> P.many1 (P.noneOf "():\t")
 
 message :: Parser T.Text
 message = fmap T.pack (P.many P.anyChar)
