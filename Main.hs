@@ -1,14 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -imodules #-}
 
-import Control.Concurrent.Chan
 import Control.Lens hiding (argument, imap)
 import Control.Monad.State hiding (state)
 import Data.List (intersperse)
 import Data.Monoid
 import qualified Data.Text as T
-import System.Console.Docopt
 import System.Directory (getCurrentDirectory)
 import System.Environment
 
@@ -20,7 +17,7 @@ import qualified Yi.Keymap.Vim.Common as V
 import qualified Yi.Keymap.Vim.Ex.Types as V
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
-import Yi.UI.Vty
+import qualified Yi.Frontend.Vty as Vty
 
 import FuzzyFile
 import Make
@@ -30,29 +27,19 @@ import MySnippets
 import RainbowMode
 import PyflakesMode
 
-help :: Docopt
-help = [docopt|
-    Usage:
-      e [<file> ...]
-      e (-h|--help)
-
-    Options:
-      -h,--help      Show usage
-|]
-
 main :: IO ()
 main = do
-    args <- parseArgsOrExit help =<< getArgs
-    let files = getAllArgs args (argument "file")
-        actions = intersperse (EditorA newTabE) (map (YiA . openNewFile) files)
+    files <- getArgs
+    let actions = intersperse (EditorA newTabE) (map (YiA . openNewFile) files)
     startEditor (myConfig actions) Nothing
 
 myConfig :: [Action] -> Config
-myConfig actions = defaultVimConfig
+myConfig actions = defaultConfig
     { modeTable =
         fmap
             (configureModeline . configureIndent)
-            (myModes defaultVimConfig)
+            (myModes defaultConfig)
+    , startFrontEnd = Vty.start
     , defaultKm = myKeymapSet
     , configCheckExternalChangesObsessively = False
     , startActions =

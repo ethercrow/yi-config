@@ -30,7 +30,6 @@ executable e
     , containers
     , data-default
     , directory
-    , docopt >= 0.7
     , filepath
     , free
     , lens
@@ -46,9 +45,12 @@ executable e
     , utf8-string
     , vector
     , vector-algorithms
-    , yi >= 0.12.2
-    , yi-rope
+    , yi-core
+    , yi-frontend-vty
+    , yi-keymap-vim
     , yi-language
+    , yi-misc-modes
+    , yi-rope
   hs-source-dirs: modules, .
   ghc-options: -O2 -threaded -Wall -ferror-spans -fcontext-stack=110
   default-language:    Haskell2010

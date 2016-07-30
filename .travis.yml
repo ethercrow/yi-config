@@ -19,6 +19,9 @@ before_install:
   - export PATH=~/.local/bin:/opt/ghc/7.10.3/bin:$PATH
   - travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v0.1.2.0/stack-0.1.2.0-x86_64-linux.gz | gunzip > ~/.local/bin/stack
   - chmod a+x ~/.local/bin/stack
+  - mkdir src
+  - git clone https://github.com/yi-editor/yi src/yi
+  - cd src/yi && git checkout split-packages
 
 script:
   - stack install

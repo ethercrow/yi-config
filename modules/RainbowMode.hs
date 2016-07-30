@@ -8,6 +8,7 @@ import Data.Foldable (asum)
 import Data.Maybe
 
 import Yi hiding (super)
+import Yi.Mode.Common (fundamentalMode)
 import Yi.Modes
 import Yi.Lexer.Alex
 import Yi.Syntax

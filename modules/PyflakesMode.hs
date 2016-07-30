@@ -27,6 +27,7 @@ import System.Process
 import Yi hiding (super)
 import Yi.Lexer.Alex
 import Yi.Utils (io)
+import Yi.Mode.Common (fundamentalMode)
 import Yi.Modes
 import Yi.Syntax
 import Yi.Types

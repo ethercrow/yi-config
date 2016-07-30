@@ -29,7 +29,6 @@ module Fuzzy
     , genericFuzzy
     ) where
 
-import Control.Applicative
 import Control.Monad.ST
 import Data.Binary
 import Data.Default
