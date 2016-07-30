@@ -12,16 +12,18 @@ addons:
 cache:
   directories:
     - $HOME/.stack
+    - $HOME/stack-1.1.2-linux-x86_64
 
 before_install:
   - mkdir -p ~/.local/bin
   - ls /opt/ghc
   - export PATH=~/.local/bin:/opt/ghc/7.10.3/bin:$PATH
-  - travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v0.1.2.0/stack-0.1.2.0-x86_64-linux.gz | gunzip > ~/.local/bin/stack
+  - test -d stack-1.1.2-linux-x86_64 ||travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v1.1.2/stack-1.1.2-linux-x86_64.tar.gz -o stack.tar.gz && tar xvf stack.tar.gz
+  - cp stack-1.1.2-linux-x86_64/stack ~/.local/bin/stack
   - chmod a+x ~/.local/bin/stack
-  - mkdir src
-  - git clone https://github.com/yi-editor/yi src/yi
-  - cd src/yi && git checkout split-packages
+  - pushd $PWD
+  - cd ../.. && mkdir src && git clone https://github.com/yi-editor/yi src/yi && cd src/yi && git checkout split-packages
+  - popd
 
 script:
   - stack install
