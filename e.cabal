@@ -1,6 +1,6 @@
 name:                e
 version:             0.1.0.0
-license:             GPL-3
+license:             GPL-2
 license-file:        LICENSE
 author:              Dmitry Ivanov
 maintainer:          ethercrow@gmail.com
