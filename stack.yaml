@@ -9,3 +9,4 @@ packages:
 resolver: lts-6.9
 extra-deps:
 - ListLike-4.5
+- compiler-warnings-0.1.0

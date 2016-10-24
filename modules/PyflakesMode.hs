@@ -36,7 +36,7 @@ import qualified Yi.Keymap.Vim.Common as Vim
 import qualified Yi.Keymap.Vim.Ex.Types as Vim
 import qualified Yi.Keymap.Vim.Ex.Commands.Common as Vim
 
-import Warning
+import Text.Warning
 import YiWarning
 
 pyflakesMode :: Mode ()

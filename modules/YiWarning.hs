@@ -22,7 +22,7 @@ import Yi
 import Yi.Types
 import qualified Yi.Rope as R
 
-import Warning
+import Text.Warning
 
 messageToOverlayB :: (UIStyle -> Style) -> Warning -> BufferM Overlay
 messageToOverlayB style (Warning _ l1 c1 l2 c2 msg) = savingPointB $ do

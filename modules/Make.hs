@@ -60,7 +60,7 @@ import Yi.Types
 import Yi.Utils
 import Yi.Window (width)
 
-import Warning
+import Text.Warning
 import YiWarning
 
 overlayName :: R.YiString
