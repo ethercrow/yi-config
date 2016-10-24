@@ -30,7 +30,6 @@ module Make
 
 import Control.Concurrent
 import Control.Exception
-import Control.Lens
 import Control.Monad
 import Control.Monad.State (gets)
 import Control.Monad.Reader
@@ -38,13 +37,15 @@ import Data.Binary
 import Data.Default
 import Data.Foldable (find, toList)
 import Data.List (isSuffixOf, sortBy)
+import qualified Data.Map.Strict as M
 import Data.Monoid
 import Data.Ord (comparing, Down (..))
-import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Typeable
 import qualified Data.Vector as V
+import Lens.Micro.Platform
 import System.Directory
 import System.Exit
 import System.FilePath
@@ -71,9 +72,7 @@ errorCountE = do
     return (getSum (foldMap (Sum . V.length) warnings))
 
 errorCountB :: BufferM Int
-errorCountB = do
-    overlays <- getOverlaysOfOwnerB overlayName
-    return (lengthOf folded overlays)
+errorCountB = S.size <$> getOverlaysOfOwnerB overlayName
 
 data Scope = CurrentBuffer | Global
 

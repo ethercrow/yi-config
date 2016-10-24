@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -imodules #-}
 
-import Control.Lens hiding (argument, imap)
 import Control.Monad.State hiding (state)
 import Data.List (intersperse)
 import Data.Monoid
 import qualified Data.Text as T
+import Lens.Micro.Platform
 import System.Directory (getCurrentDirectory)
 import System.Environment
 

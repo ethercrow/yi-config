@@ -7,7 +7,7 @@ module PyflakesMode
     ) where
 
 import Control.Exception
-import Control.Lens
+import Lens.Micro.Platform
 import Control.Monad
 import Control.Monad.State (gets)
 import Data.Foldable
@@ -15,7 +15,6 @@ import qualified Data.Map.Strict as M
 import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import Data.Text.Lazy.Lens
 import qualified Data.Vector as V
 import System.Exit
 import Text.Regex.Applicative

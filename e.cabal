@@ -32,7 +32,7 @@ executable e
     , directory
     , filepath
     , free
-    , lens
+    , microlens-platform
     , mtl
     , parallel
     , parsec
@@ -41,7 +41,6 @@ executable e
     , srcloc
     , text
     , transformers-base
-    , trifecta
     , utf8-string
     , vector
     , vector-algorithms
