@@ -22,7 +22,7 @@ before_install:
   - cp stack-1.1.2-linux-x86_64/stack ~/.local/bin/stack
   - chmod a+x ~/.local/bin/stack
   - pushd $PWD
-  - cd ../.. && mkdir src && git clone https://github.com/yi-editor/yi src/yi && cd src/yi && git checkout split-packages
+  - cd ../.. && mkdir src && git clone https://github.com/yi-editor/yi src/yi && cd src/yi
   - popd
 
 script:

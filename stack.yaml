@@ -5,6 +5,7 @@ packages:
 - '../../src/yi/yi-keymap-vim'
 - '../../src/yi/yi-frontend-vty'
 - '../../src/yi/yi-misc-modes'
+- '../../src/yi/yi-snippet'
 resolver: lts-6.9
 extra-deps:
 - ListLike-4.5

@@ -21,7 +21,7 @@ import qualified Yi.Frontend.Vty as Vty
 
 import FuzzyFile
 import Make
-import qualified Snippet
+import qualified Yi.Snippet as Snippet
 import MySnippets
 
 import RainbowMode

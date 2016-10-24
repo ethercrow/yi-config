@@ -11,7 +11,7 @@ import qualified Data.Text as T
 import System.FilePath
 
 import qualified Yi.Rope as R
-import Snippet
+import Yi.Snippet
 
 mySnippets :: [Snippet]
 mySnippets =
