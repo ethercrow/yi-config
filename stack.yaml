@@ -6,7 +6,8 @@ packages:
 - '../../src/yi/yi-frontend-vty'
 - '../../src/yi/yi-misc-modes'
 - '../../src/yi/yi-snippet'
-resolver: lts-6.9
+- '../../src/yi-rope'
+resolver: lts-7.12
 extra-deps:
 - ListLike-4.5
 - compiler-warnings-0.1.0

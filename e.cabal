@@ -21,7 +21,7 @@ executable e
       RainbowMode
       YiWarning
   build-depends:
-      base >=4.6 && <4.9
+      base >=4.6 && <5
     , binary
     , bytestring
     , compiler-warnings

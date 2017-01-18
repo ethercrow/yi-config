@@ -212,7 +212,9 @@ make = do
                                 _ -> return ()
                     printMsg (unMakePrg makeprg <> case code of
                         ExitSuccess -> " finished successfully."
-                        ExitFailure f -> " failed with code " <> T.pack (show f))
+                        ExitFailure f ->
+                            let errorCount = 42 -- length ws
+                            in " failed with code " <> showT f <> ", " <> showT errorCount <> " errors")
             yiOutput x MustRefresh [EditorA action]
         case possiblyException of
             Left e -> yiOutput x MustRefresh [EditorA (printMsg (T.pack (show (e :: SomeException))))]
@@ -227,3 +229,6 @@ guessMakePrg = do
             else if any (".cabal" `isSuffixOf`) files then "cabal build"
             else "make"
     withEditor (putEditorDyn (MakePrg makePrg))
+
+showT :: Show a => a -> T.Text
+showT = T.pack . show
