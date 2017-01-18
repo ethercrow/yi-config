@@ -1,30 +1,23 @@
 language: c
 sudo: false
 
-addons:
-  apt:
-    sources:
-    - hvr-ghc
-    packages:
-    - ghc-7.10.3
-    - libgmp-dev
-
 cache:
   directories:
-    - $HOME/.stack
-    - $HOME/stack-1.1.2-linux-x86_64
+  - $HOME/.stack
+
+addons:
+  apt:
+    packages:
+    - libgmp-dev
+    sources: hvr-ghc
 
 before_install:
-  - mkdir -p ~/.local/bin
-  - ls /opt/ghc
-  - export PATH=~/.local/bin:/opt/ghc/7.10.3/bin:$PATH
-  - test -d stack-1.1.2-linux-x86_64 ||travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v1.1.2/stack-1.1.2-linux-x86_64.tar.gz -o stack.tar.gz && tar xvf stack.tar.gz
-  - cp stack-1.1.2-linux-x86_64/stack ~/.local/bin/stack
-  - chmod a+x ~/.local/bin/stack
-  - pushd $PWD
-  - cd ../.. && mkdir src && git clone https://github.com/yi-editor/yi src/yi && cd src/yi
-  - popd
+ - mkdir -p $HOME/.local/bin
+ - curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+ - stack setup
+ - pushd ../.. && mkdir src && git clone https://github.com/yi-editor/yi src/yi && popd
 
 script:
+  - perl -ne 'print if not /\.\./' -i stack.yaml
   - stack install
   - stack test

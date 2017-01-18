@@ -1,13 +1,6 @@
 flags: {}
 packages:
 - '.'
-- '../../src/yi/yi-core'
-- '../../src/yi/yi-keymap-vim'
-- '../../src/yi/yi-frontend-vty'
-- '../../src/yi/yi-misc-modes'
-- '../../src/yi/yi-snippet'
-- '../../src/yi-rope'
-resolver: lts-7.12
+resolver: nightly-2017-01-17
 extra-deps:
-- ListLike-4.5
 - compiler-warnings-0.1.0
