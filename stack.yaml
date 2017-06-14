@@ -1,6 +1,6 @@
 flags: {}
 packages:
 - '.'
-resolver: nightly-2017-01-17
 extra-deps:
 - compiler-warnings-0.1.0
+resolver: lts-8.18
