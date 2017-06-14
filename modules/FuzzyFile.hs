@@ -72,7 +72,7 @@ getRecursiveContents topdir = do
     names <- getDirectoryContents topdir
     let properNames = filter predicate names
         predicate fileName = and
-            [ fileName `notElem` [".", "..", ".git", ".svn", "node_modules", "_build"]
+            [ fileName `notElem` [".", "..", ".git", ".svn", "node_modules", "_build", ".tox"]
             , not (".hi" `isSuffixOf` fileName)
             , not ("-boot" `isSuffixOf` fileName)
             , not (".dyn_hi" `isSuffixOf` fileName)

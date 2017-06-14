@@ -1,12 +1,6 @@
 flags: {}
 packages:
 - '.'
-- '../../src/yi/yi-core'
-- '../../src/yi/yi-keymap-vim'
-- '../../src/yi/yi-frontend-vty'
-- '../../src/yi/yi-misc-modes'
-- '../../src/yi/yi-snippet'
-resolver: lts-6.9
 extra-deps:
-- ListLike-4.5
 - compiler-warnings-0.1.0
+resolver: lts-8.18

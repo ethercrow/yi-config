@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# language OverloadedStrings #-}
+{-# language LambdaCase #-}
+{-# language ScopedTypeVariables #-}
 
 module YiWarning
     ( WarningStorage (..)
@@ -7,6 +9,7 @@ module YiWarning
     , parseWarningStorage
     ) where
 
+import Control.Exception
 import Data.Binary
 import Data.Default
 import Data.Foldable (toList)
@@ -54,7 +57,9 @@ fixPathsInBufferIds maybeCustomMakeDir (WarningStorage ws) =
                 let path' = case maybeCustomMakeDir of
                         Just d -> d </> path
                         Nothing -> path
-                FileBuffer <$> canonicalizePath path')
+                try (canonicalizePath path') >>= \case
+                    Right canonPath -> pure (FileBuffer canonPath)
+                    Left (exc :: SomeException) -> pure (FileBuffer path'))
             ws
 
 traverseKeys :: (Applicative f, Ord b) => (a -> f b) -> M.Map a v -> f (M.Map b v)

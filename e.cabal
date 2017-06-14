@@ -21,7 +21,7 @@ executable e
       RainbowMode
       YiWarning
   build-depends:
-      base >=4.6 && <4.9
+      base >=4.6 && <5
     , binary
     , bytestring
     , compiler-warnings
@@ -42,13 +42,13 @@ executable e
     , utf8-string
     , vector
     , vector-algorithms
-    , yi-core
-    , yi-frontend-vty
-    , yi-keymap-vim
-    , yi-language
-    , yi-misc-modes
+    , yi-core >= 0.13.5
+    , yi-frontend-vty >= 0.13.5
+    , yi-keymap-vim >= 0.13.5
+    , yi-language >= 0.13.5
+    , yi-misc-modes >= 0.13.5
     , yi-rope
-    , yi-snippet
+    , yi-snippet >= 0.13.5
   hs-source-dirs: modules, .
   ghc-options: -O2 -threaded -Wall -ferror-spans -fcontext-stack=110
   default-language:    Haskell2010
