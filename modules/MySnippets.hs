@@ -4,7 +4,6 @@ module MySnippets
     ( mySnippets
     ) where
 
-import Control.Applicative
 import Data.Char (isUpper)
 import Data.Monoid
 import qualified Data.Text as T
@@ -89,3 +88,4 @@ dropCommon s =
         [x] -> x
         "Control" : rest -> R.intercalate "." rest
         "Data" : rest -> R.intercalate "." rest
+        _ -> s

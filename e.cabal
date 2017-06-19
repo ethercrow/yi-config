@@ -50,5 +50,5 @@ executable e
     , yi-rope
     , yi-snippet >= 0.13.5
   hs-source-dirs: modules, .
-  ghc-options: -O2 -threaded -Wall -ferror-spans -fcontext-stack=110
+  ghc-options: -O2 -threaded -Wall -ferror-spans
   default-language:    Haskell2010
