@@ -1,6 +1,13 @@
 flags: {}
 packages:
 - '.'
+- location: '../../src/yi'
+  subdirs:
+    - 'yi-core'
+    - 'yi-frontend-vty'
+    - 'yi-keymap-vim'
+    - 'yi-snippet'
+    - 'yi-misc-modes'
 extra-deps:
 - compiler-warnings-0.1.0
 resolver: lts-8.18

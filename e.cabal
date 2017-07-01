@@ -15,10 +15,10 @@ executable e
       Fuzzy
       FuzzyFile
       FuzzyMatchScore
+      LSP
       Make
       MySnippets
       PyflakesMode
-      RainbowMode
       YiWarning
   build-depends:
       base >=4.6 && <5
@@ -42,13 +42,12 @@ executable e
     , utf8-string
     , vector
     , vector-algorithms
-    , yi-core >= 0.13.5
-    , yi-frontend-vty >= 0.13.5
-    , yi-keymap-vim >= 0.13.5
-    , yi-language >= 0.13.5
-    , yi-misc-modes >= 0.13.5
+    , yi-core >= 0.15
+    , yi-frontend-vty >= 0.15
+    , yi-keymap-vim >= 0.15
+    , yi-misc-modes >= 0.15
     , yi-rope
-    , yi-snippet >= 0.13.5
+    , yi-snippet >= 0.15
   hs-source-dirs: modules, .
   ghc-options: -O2 -threaded -Wall -ferror-spans
   default-language:    Haskell2010

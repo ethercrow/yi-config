@@ -23,8 +23,8 @@ import FuzzyFile
 import Make
 import qualified Yi.Snippet as Snippet
 import MySnippets
+import LSP
 
-import RainbowMode
 import PyflakesMode
 
 main :: IO ()
@@ -57,7 +57,7 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
         { V.vimBindings = myBindings eval ++ V.vimBindings super
         , V.vimRelayout = colemakRelayout
         , V.vimExCommandParsers =
-            exMake : exFlakes : exMakePrgOption : exPwd :
+            exMake : exFlakes : exMakePrgOption : exPwd : exStartLSP :
                 V.vimExCommandParsers super
         }
 
@@ -97,8 +97,8 @@ colemakRelayout = V.relayoutFromTo colemakLayout qwertyLayout
         colemakLayout = concat ["qwfpgjluy;[]", "arstdhneio'\\", "zxcvbkm,./"]
         qwertyLayout = concat ["qwertyuiop[]", "asdfghjkl;'\\", "zxcvbnm,./"]
 
-configureIndent :: AnyMode -> AnyMode
-configureIndent = onMode $ \m ->
+configureIndent :: Mode -> Mode
+configureIndent m =
     if m ^. modeNameA == "Makefile"
     then m
     else m
@@ -108,8 +108,8 @@ configureIndent = onMode $ \m ->
             , tabSize = 4
             }}
 
-configureModeline :: AnyMode -> AnyMode
-configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
+configureModeline :: Mode -> Mode
+configureModeline m = m {modeModeLine = myModeLine}
     where
     myModeLine prefix = do
         (line, col) <- getLineAndCol
@@ -130,12 +130,16 @@ configureModeline = onMode $ \m -> m {modeModeLine = myModeLine}
                 else ""
             ]
 
-myModes :: Config -> [AnyMode]
+myModes :: Config -> [Mode]
 myModes cfg
-    = AnyMode gnuMakeMode
-    : AnyMode pyflakesMode
-    : AnyMode rainbowParenMode
+    = gnuMakeMode
+    : pyflakesMode
+    -- : rainbowParenMode
     : modeTable cfg
+
+exStartLSP :: V.EventString -> Maybe V.ExCommand
+exStartLSP "startLSP" = Just (V.impureExCommand{V.cmdAction = YiA (io startLSP)})
+exStartLSP _ = Nothing
 
 exPwd :: V.EventString -> Maybe V.ExCommand
 exPwd "pwd" = Just (V.impureExCommand{V.cmdAction = YiA (io getCurrentDirectory >>= printMsg . T.pack)})

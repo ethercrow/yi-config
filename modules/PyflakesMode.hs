@@ -28,7 +28,7 @@ import qualified Yi.Keymap.Vim.Ex.Commands.Common as Vim
 
 import YiWarning
 
-pyflakesMode :: Mode ()
+pyflakesMode :: Mode
 pyflakesMode = fundamentalMode
     { modeName = "pyflakes"
     , modeApplies = anyExtension ["py"]
