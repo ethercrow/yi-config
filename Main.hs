@@ -19,6 +19,7 @@ import qualified Yi.Keymap.Vim.Ex.Commands.Common as V
 import qualified Yi.Keymap.Vim.Utils as V
 import qualified Yi.Frontend.Vty as Vty
 
+import RainbowMode
 import FuzzyFile
 import Make
 import qualified Yi.Snippet as Snippet
@@ -134,7 +135,7 @@ myModes :: Config -> [Mode]
 myModes cfg
     = gnuMakeMode
     : pyflakesMode
-    -- : rainbowParenMode
+    : rainbowParenMode
     : modeTable cfg
 
 exStartLSP :: V.EventString -> Maybe V.ExCommand

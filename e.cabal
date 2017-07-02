@@ -19,6 +19,7 @@ executable e
       Make
       MySnippets
       PyflakesMode
+      RainbowMode
       YiWarning
   build-depends:
       base >=4.6 && <5
