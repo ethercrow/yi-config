@@ -3,4 +3,5 @@ packages:
 - '.'
 extra-deps:
 - compiler-warnings-0.1.0
-resolver: lts-8.18
+- yi-rope-0.10
+resolver: lts-9.4
