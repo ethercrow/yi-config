@@ -55,7 +55,6 @@ myKeymapSet = V.mkKeymapSet $ V.defVimConfig `override` \super this ->
     let eval = V.pureEval this
     in super
         { V.vimBindings = myBindings eval ++ V.vimBindings super
-        , V.vimRelayout = colemakRelayout
         , V.vimExCommandParsers =
             exMake : exFlakes : exMakePrgOption : exPwd :
                 V.vimExCommandParsers super
@@ -75,7 +74,7 @@ myBindings eval =
        , nmap "<Tab>" nextTabE
        , nmap " " (eval ":nohlsearch<CR>")
        , nmap ";" (eval ":")
-       , nmapY "<C-;>" fuzzyFile
+       , nmapY "<C-p>" fuzzyFile
        , nmap "<M-s>" (withCurrentBuffer deleteTrailingSpaceB)
        , nmap "<M-l>" (withCurrentBuffer (transposeB unitWord Forward >> leftB))
        , nmap "<M-h>" (withCurrentBuffer (transposeB unitWord Backward))
@@ -90,12 +89,6 @@ myBindings eval =
                when (not expanded) (defEval "<Tab>"))
        , nmapY "<Esc>" (flakes >> withEditor (defEval "<Esc>"))
        ]
-
-colemakRelayout :: Char -> Char
-colemakRelayout = V.relayoutFromTo colemakLayout qwertyLayout
-    where
-        colemakLayout = concat ["qwfpgjluy;[]", "arstdhneio'\\", "zxcvbkm,./"]
-        qwertyLayout = concat ["qwertyuiop[]", "asdfghjkl;'\\", "zxcvbnm,./"]
 
 configureIndent :: AnyMode -> AnyMode
 configureIndent = onMode $ \m ->

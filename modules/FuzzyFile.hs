@@ -21,7 +21,6 @@ import Data.List (isInfixOf, isSuffixOf)
 import Data.Monoid
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import System.Directory (doesDirectoryExist, getDirectoryContents)
 import System.FilePath ((</>))
 
@@ -39,7 +38,7 @@ fileItem filename = FuzzyItem
     , fiToText = T.pack ("File " <> filename)
     }
 
--- bufferItem :: BufferIdent -> FuzzyItem
+bufferItem :: BufferId -> FuzzyItem
 bufferItem bufId = FuzzyItem
     { fiAction = withEditor $ do
         bufs <- gets (M.assocs . buffers)
@@ -67,6 +66,7 @@ getItems = do
 -- takes about 3 seconds to traverse linux kernel, which is not too outrageous
 -- TODO: check if it works at all with cyclic links
 -- TODO: perform in background, limit file count or directory depth
+-- TODO: ignore what is in .gitignore
 getRecursiveContents :: FilePath -> IO [FilePath]
 getRecursiveContents topdir = do
     names <- getDirectoryContents topdir
@@ -83,6 +83,10 @@ getRecursiveContents topdir = do
                 , "Packages"
                 , ".stack-work"
                 , ".tox"
+                , ".stack-work"
+                , ".build"
+                , ".compiled"
+                , "dist-newstyle"
                 ]
             , not (".hi" `isSuffixOf` fileName)
             , not ("-boot" `isSuffixOf` fileName)

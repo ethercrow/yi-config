@@ -50,5 +50,5 @@ executable e
     , yi-rope
     , yi-snippet
   hs-source-dirs: modules, .
-  ghc-options: -O2 -threaded -Wall -ferror-spans
+  ghc-options: -O2 -threaded -Wall -ferror-spans -msse4.2
   default-language:    Haskell2010
